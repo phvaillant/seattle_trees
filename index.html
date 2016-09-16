@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<head>
+     <meta content="text/html;charset=utf-8" http-equiv="Content-Type">
+     <meta content="utf-8" http-equiv="encoding">
+     <link rel="stylesheet" href="css/bootstrap.css" />
+     <link rel="stylesheet" href="css/bootstrap-multiselect.css" type="text/css"/>
+     <link rel="stylesheet" href="css/leaflet.css" />
+     <link rel="stylesheet" href="css/style.css" />
+	<title>Seattle Trees Map</title>
+</head>
+
+<body>
+
+<div class="container">
+
+     <div class="row">
+
+          <div class="col-md-3 sidebar well">
+
+            <ul class="nav nav-pills nav-justified">
+                      <li class="active"><a data-toggle="pill" href="#home">Tree</a></li>
+                      <li><a data-toggle="pill" href="#menu1">Neighborhood</a></li>
+                      <li><a data-toggle="pill" href="#menu2">About</a></li>
+                    </ul>
+
+                    <div class="tab-content">
+                      <div id="home" class="tab-pane fade in active">
+                        <h3>Tree</h3>
+                        <p>Some content.</p>
+                      </div>
+                      <div id="menu1" class="tab-pane fade">
+                        <h3>Neighborhood</h3>
+                        <p>Some content in menu 1.</p>
+                      </div>
+                      <div id="menu2" class="tab-pane fade">
+                        <h3>About</h3>
+                        <p>Some content in menu 2.</p>
+                      </div>
+                    </div>
+
+          </div>
+
+          <div class="col-md-9" id="map-container">
+
+              <div id="map-canvas">
+
+                    <button type="button" class="btn toggle-sidebar">
+                         <span class="glyphicon glyphicon-align-justify" aria-hidden="true"></span>
+                    </button>
+
+              </div>
+
+              <div id="filters-container">
+
+                <select id="order-filter" multiple="multiple">
+                </select>
+
+                <select id="family-filter" multiple="multiple">
+                </select>
+
+                <select id="genus-filter" multiple="multiple">
+                </select>
+
+			       </div>
+
+          </div>
+
+     </div>
+
+</div>
+
+<!-- The Javascript from external websites gets Loaded Here -->
+<script type='text/javascript' src='js/jquery-3.1.0.min.js'></script>
+<script type='text/javascript' src='js/bootstrap.min.js'></script>
+<script type='text/javascript' src='js/collapsible_sidebar.js'></script>
+<script type='text/javascript' src='js/leaflet.js'></script>
+<script type='text/javascript' src='js/viz.js'></script>
+<script type="text/javascript" src="js/bootstrap-multiselect.js"></script>
+
+</body>
+</html>
