@@ -204,7 +204,8 @@ $(document).ready(function() {
 
 				        marker.on('click', function() {
 				        	$.getJSON( root_api + "trees/description/" + v.compkey, function(data) {
-				        		$("#detail_tree").html("<br><p>Species (Scientific): " + v.new_scientific + '</p><br><p>Species (Common): ' + v.new_common_nam + '</p><br><p>Genus: '+ v.genus + '</p><br><p>Family (Scientific): ' + v.family + '</p><br><p>Family (Common): ' + v.family_common + '</p><br><p>Plantation Order: ' + v.order_plant + '</p><br><p>Plantation Date: ' + v.planted_da + '</p><br><p>Tree Diameter: ' + v.diam + '</p><br><p>Tree Height: ' + v.treeheight + '</p><br><p>Ownership: ' + v.ownership + '</p><br><p>Last time it has been verified: ' + v.last_verif + '</p>'); 
+				        		tree_info = data[0];
+				        		$("#detail_tree").html("<br><p>Species (Scientific): " + tree_info.new_scientific + '</p><br><p>Species (Common): ' + tree_info.new_common_nam + '</p><br><p>Genus: '+ tree_info.genus + '</p><br><p>Family (Scientific): ' + tree_info.family + '</p><br><p>Family (Common): ' + tree_info.family_common + '</p><br><p>Plantation Order: ' + tree_info.order_plant + '</p><br><p>Plantation Date: ' + tree_info.planted_da.substr(0,10) + '</p><br><p>Tree Diameter: ' + tree_info.diam + '</p><br><p>Tree Height: ' + tree_info.treeheight + '</p><br><p>Ownership: ' + tree_info.ownership + '</p><br><p>Last time it has been verified: ' + tree_info.last_verif + '</p>'); 
 				        	}); // end of getjson function
 				        	if ($(".sidebar").hasClass('collapsed')) {
 				        		collapse_sidebar();
