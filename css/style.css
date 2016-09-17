@@ -13,6 +13,7 @@ html, body, .container{
 	height: calc(100% - 40px);
 	overflow-y: scroll;
 	padding-left: 10px;
+	padding-right: 10px;
 }
 
 .dropdown-menu {

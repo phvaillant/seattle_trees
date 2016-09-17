@@ -205,7 +205,21 @@ $(document).ready(function() {
 				        marker.on('click', function() {
 				        	$.getJSON( root_api + "trees/description/" + v.compkey, function(data) {
 				        		tree_info = data[0];
-				        		$("#detail_tree").html("<br><p>Species (Scientific): " + tree_info.new_scientific + '</p><br><p>Species (Common): ' + tree_info.new_common_nam + '</p><br><p>Genus: '+ tree_info.genus + '</p><br><p>Family (Scientific): ' + tree_info.family + '</p><br><p>Family (Common): ' + tree_info.family_common + '</p><br><p>Plantation Order: ' + tree_info.order_plant + '</p><br><p>Plantation Date: ' + tree_info.planted_da.substr(0,10) + '</p><br><p>Tree Diameter: ' + tree_info.diam + '</p><br><p>Tree Height: ' + tree_info.treeheight + '</p><br><p>Ownership: ' + tree_info.ownership + '</p><br><p>Last time it has been verified: ' + tree_info.last_verif + '</p>'); 
+				        		var planted_da;
+				        		var last_verif;
+				        		if (tree_info.planted_da) {
+				        			planted_da = tree_info.planted_da.substr(0,10)
+				        		}
+				        		else {
+				        			planted_da = "Unknown"
+				        		}
+				        		if (tree_info.last_verif) {
+				        			last_verif = tree_info.last_verif.substr(0,10)
+				        		}
+				        		else {
+				        			last_verif = "Unknown"
+				        		}
+				        		$("#detail_tree").html("<li class='list-group-item'><b>Tree id:</b> " + tree_info.unitid + "</li><li class='list-group-item'><b>Species (Scientific):</b> " + tree_info.new_scientific + "</li><li class='list-group-item'><b>Species (Common):</b> " + tree_info.new_common_nam + "</li><li class='list-group-item'><b>Genus:</b> "+ tree_info.genus + "</li><li class='list-group-item'><b>Family (Scientific):</b> " + tree_info.family + "</li><li class='list-group-item'><b>Family (Common):</b> " + tree_info.family_common + "</li><li class='list-group-item'><b>Order:</b> " + tree_info.order_plant + "</li><li class='list-group-item'><b>Plantation Date:</b> " + planted_da + "</li><li class='list-group-item'><b>Tree Diameter:</b> " + tree_info.diam + "</li><li class='list-group-item'><b>Address:</b> " + tree_info.unitdesc +"</li><li class='list-group-item'><b>Tree Height:</b> " + tree_info.treeheight + "</li><li class='list-group-item'><b>Ownership:</b> " + tree_info.ownership + "</li><li class='list-group-item'><b>Last time it has been verified:</b> " + last_verif + '</li>'); 
 				        	}); // end of getjson function
 				        	if ($(".sidebar").hasClass('collapsed')) {
 				        		collapse_sidebar();
