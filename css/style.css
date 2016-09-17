@@ -9,6 +9,12 @@ html, body, .container{
 	margin: 0px;
 }
 
+.tab-content {
+	height: calc(100% - 40px);
+	overflow-y: scroll;
+	padding-left: 10px;
+}
+
 .dropdown-menu {
 	max-height: 400px;
 	overflow-y: auto;
