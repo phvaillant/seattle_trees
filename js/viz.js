@@ -38,6 +38,18 @@ $(document).ready(function() {
 		//add tile to your map
 		your_tile.addTo(map);
 
+		// load GeoJSON from an external file
+	    $.getJSON("js/seattle_neighborhood.geojson",function(data){
+	    	$.each(data.features, function(key, val) {
+	    		console.log(val);
+	    		console.log(val.properties.name + " in " + val.properties.nhood);
+	    	})
+	    	//console.log(data.properties.name);
+	    	console.log(data);
+	    	// add GeoJSON layer to the map once the file is loaded
+	    	L.geoJson(data.features).addTo(map);
+	    });
+
 		$('#order-filter').multiselect({
             enableFiltering: true,
             nonSelectedText: 'No order selected',
