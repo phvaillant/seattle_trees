@@ -201,6 +201,15 @@ $(document).ready(function() {
 				        marker.on('mouseout', function (e) {
 				            this.closePopup();
 				        });
+
+				        marker.on('click', function() {
+				        	console.log(v);
+				        	$.getJSON( root_api + "trees/description/" + v.compkey, function(data) {
+				        		console.log(data);
+				        		$("#detail_tree").html("<br><p>Species: " + v.new_scientific + '</p>');
+				        	}); // end of getjson function
+				        }); // end of marker on click function
+
 					    //add the feature to the layer
 					    //layer.addLayer(featureLayer); 
 					    marker.addTo(layer);
