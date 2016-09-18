@@ -17,6 +17,9 @@ var treeicon = L.icon({
     popupAnchor: new L.Point(0, -10)
 });
 
+//save the geojson feature of each neighborhood
+var neighborhoods = {};
+
 //define tile
 var your_tile = L.tileLayer('http://stamen-tiles-{s}.a.ssl.fastly.net/watercolor/{z}/{x}/{y}.{ext}', {
 	attribution: 'Map tiles by <a href="http://stamen.com">Stamen Design</a>, <a href="http://creativecommons.org/licenses/by/3.0">CC BY 3.0</a> &mdash; Map data &copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>'
@@ -38,17 +41,21 @@ $(document).ready(function() {
 		//add tile to your map
 		your_tile.addTo(map);
 
-		// load GeoJSON from an external file
-	    $.getJSON("js/seattle_neighborhood.geojson",function(data){
-	    	$.each(data.features, function(key, val) {
-	    		console.log(val);
-	    		console.log(val.properties.name + " in " + val.properties.nhood);
-	    	})
-	    	//console.log(data.properties.name);
-	    	console.log(data);
-	    	// add GeoJSON layer to the map once the file is loaded
-	    	L.geoJson(data.features).addTo(map);
-	    });
+		//store previous nhood for layer display
+		var previous_nhood = -1;
+    	$('#neighborhoods').multiselect({
+    		onChange: function(option, select) {
+    			if (previous_nhood != -1) {
+    				map.removeLayer(neighborhoods[previous_nhood]);
+    			}
+    			previous_nhood = option.val();
+    			limits = neighborhoods[previous_nhood].getBounds();
+    			map.fitBounds(limits);
+    			clearallLayers();
+    			initialize_trees();
+    			neighborhoods[previous_nhood].addTo(map);
+    		}
+    	});
 
 		$('#order-filter').multiselect({
             enableFiltering: true,
@@ -173,6 +180,9 @@ $(document).ready(function() {
         //initialize the markers
         initialize_trees();
 
+        //initialize the neighborhoods filter
+        initialize_neighborhoods();
+
         //clear markers when you start dragging the map
 		map.on('dragstart', function onDragStart() {
 			clearallLayers();
@@ -182,6 +192,28 @@ $(document).ready(function() {
 		map.on('dragend', function onDragEnd(){
 			initialize_trees();
 	    });
+
+	    function initialize_neighborhoods() {
+	    	// load GeoJSON from an external file
+		    $.getJSON("js/seattle_neighborhoods.geojson",function(data){
+		    	$.each( data, function( key, val ) {
+		    		nhood = val.properties.nhood;
+		    		name = val.properties.name;
+		    		if (nhood == name) {
+		    		  $('#neighborhoods select').append('<option value="' + key + '">'+name+'</option>');
+		    		}
+		    		else {
+				      $('#neighborhoods').append('<option value="' + key + '">'+name+ ' (in ' + nhood + ')</option>');
+		    		};
+		    		$("#family-filter").multiselect("deselectAll", false);
+		    		$("#neighborhoods").multiselect("rebuild");
+		    		neighborhoods[key] = L.geoJson(val);
+				}); //end of each function
+		    	// add GeoJSON layer to the map once the file is loaded
+		    	//neighborhoods[] = L.geoJson(data)
+		    	//neighborhoods.addTo(map);
+		    });
+	    };
 
         function initialize_trees() {
 
@@ -236,6 +268,11 @@ $(document).ready(function() {
 				        	if ($(".sidebar").hasClass('collapsed')) {
 				        		collapse_sidebar();
 				        	};
+				        	//show tree tab
+				        	$("#top-sidebar li").removeClass("active");
+				        	$(".tab-content div").removeClass("active");
+				        	$("#tree_top_sidebar").addClass("active");
+				        	$("#home").addClass("in active");
 				        }); // end of marker on click function
 
 					    //add the feature to the layer
