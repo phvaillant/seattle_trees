@@ -200,7 +200,7 @@ $(document).ready(function() {
 		    		nhood = val.properties.nhood;
 		    		name = val.properties.name;
 		    		if (nhood == name) {
-		    		  $('#neighborhoods select').append('<option value="' + key + '">'+name+'</option>');
+		    		  $('#neighborhoods').append('<option value="' + key + '">'+name+'</option>');
 		    		}
 		    		else {
 				      $('#neighborhoods').append('<option value="' + key + '">'+name+ ' (in ' + nhood + ')</option>');
