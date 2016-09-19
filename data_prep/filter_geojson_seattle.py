@@ -12,6 +12,12 @@ input_dict = data["features"]
 output_dict = [x for x in input_dict if x['properties']['city'] == 'Seattle']
 output_dict = sorted(output_dict,key=lambda x:x['properties']['name'])
 
+feature_collection = {"type": "FeatureCollection",
+                      "features": output_dict
+                      }
+
+#print feature_collection
+
 #Save the object as a geojson file
 with open('seattle_neighborhoods.geojson', 'w') as outfile:
-    json.dump(output_dict, outfile)
+    json.dump(feature_collection, outfile)
