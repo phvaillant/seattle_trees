@@ -12,6 +12,7 @@ html, body, .container{
 #detail_neighborhood {
 	padding-left: 10px;
 	padding-right: 10px;
+	height: 100%;
 }
 
 .tab-content {
@@ -54,6 +55,17 @@ html, body, .container{
     /* same width as sidebar */
     margin-left: -25%;
   }
+}
+
+.axis {
+	  font: 10px sans-serif;
+	}
+
+.axis path,
+.axis line {
+	 fill: none;
+	 stroke: #000;
+	 shape-rendering: crispEdges;
 }
 /*
 .navbar .nav > li {
