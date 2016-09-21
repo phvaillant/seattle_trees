@@ -45,22 +45,24 @@ $(document).ready(function() {
 		var previous_nhood = -1;
     	$('#neighborhoods').multiselect({
     		onChange: function(option, select) {
+    			console.log(option);
     			if (previous_nhood != -1) {
     				map.removeLayer(neighborhoods[previous_nhood]);
-    				previous_nhood = option.val();
-	    			limits = neighborhoods[previous_nhood].getBounds();
-	    			map.fitBounds(limits);
-	    			clearallLayers();
-	    			initialize_trees();
-	    			neighborhoods[previous_nhood].addTo(map);
-	    			//initialize_graph_common_genus(previous_nhood);
+    				// previous_nhood = option.val();
+	    			// limits = neighborhoods[previous_nhood].getBounds();
+	    			// map.fitBounds(limits);
+	    			// clearallLayers();
+	    			// initialize_trees();
+	    			// neighborhoods[previous_nhood].addTo(map);
+	    			// initialize_graph_common_genus(previous_nhood);
     			}
-    			// previous_nhood = option.val();
-    			// limits = neighborhoods[previous_nhood].getBounds();
-    			// map.fitBounds(limits);
-    			// clearallLayers();
-    			// initialize_trees();
-    			// neighborhoods[previous_nhood].addTo(map);
+    			previous_nhood = option.val();
+    			limits = neighborhoods[previous_nhood].getBounds();
+    			map.fitBounds(limits);
+    			clearallLayers();
+    			initialize_trees();
+    			neighborhoods[previous_nhood].addTo(map);
+    			initialize_graph_common_genus(previous_nhood);
     		}
     	});
 
@@ -227,19 +229,16 @@ $(document).ready(function() {
 			    width = parseInt(d3.select('#detail_neighborhood').style('width')) - margin.left - margin.right,
 			    height = parseInt(d3.select('#detail_neighborhood').style('height')) - margin.top - margin.bottom;
 
-			var x = d3.scale.ordinal().rangeRoundBands([0, width], .05);
-
-			var y = d3.scale.linear().range([height, 0]);
-
-			var xAxis = d3.svg.axis()
-			    .scale(x)
-			    .orient("bottom")
-
-			var yAxis = d3.svg.axis()
-			    .scale(y)
-			    .orient("left")
-			    .ticks(10);
-
+			// set the ranges
+			var x = d3.scaleBand()
+			          .range([0, width])
+			          .padding(0.1);
+			var y = d3.scaleLinear()
+			          .range([height, 0]);
+			          
+			// append the svg object to the body of the page
+			// append a 'group' element to 'svg'
+			// moves the 'group' element to the top left margin
 			var svg = d3.select("#detail_neighborhood").append("svg")
 			    .attr("width", width + margin.left + margin.right)
 			    .attr("height", height + margin.top + margin.bottom)
@@ -247,39 +246,35 @@ $(document).ready(function() {
 			    .attr("transform", 
 			          "translate(" + margin.left + "," + margin.top + ")");
 
-			$.getJSON( root_api + "/trees/common/neighborhoood/" + nhood, function(data) {
-				
-			  x.domain(data.map(function(d) { return d.name; }));
-			  y.domain([0, d3.max(data, function(d) { return d.total; })]);
+			$.getJSON( root_api + "trees/common/neighborhood/" + nhood, function(data) {
 
-			  svg.append("g")
-			      .attr("class", "x axis")
-			      .attr("transform", "translate(0," + height + ")")
-			      .call(xAxis)
-			    .selectAll("text")
-			      .style("text-anchor", "end")
-			      .attr("dx", "-.8em")
-			      .attr("dy", "-.55em")
-			      .attr("transform", "rotate(-90)" );
+				// format the data
+				  data.forEach(function(d) {
+				    d.total = +d.total;
+				  });
 
-			  svg.append("g")
-			      .attr("class", "y axis")
-			      .call(yAxis)
-			    .append("text")
-			      .attr("transform", "rotate(-90)")
-			      .attr("y", 6)
-			      .attr("dy", ".71em")
-			      .style("text-anchor", "end")
-			      .text("Value ($)");
+				  // Scale the range of the data in the domains
+				  x.domain(data.map(function(d) { return d.genus; }));
+				  y.domain([0, d3.max(data, function(d) { return d.total; })]);
 
-			  svg.selectAll("bar")
+			  // append the rectangles for the bar chart
+			  svg.selectAll(".bar")
 			      .data(data)
 			    .enter().append("rect")
-			      .style("fill", "steelblue")
-			      .attr("x", function(d) { return x(d.date); })
-			      .attr("width", x.rangeBand())
-			      .attr("y", function(d) { return y(d.value); })
-			      .attr("height", function(d) { return height - y(d.value); });
+			      .attr("class", "bar")
+			      .attr("x", function(d) { return x(d.genus); })
+			      .attr("width", x.bandwidth())
+			      .attr("y", function(d) { return y(d.total); })
+			      .attr("height", function(d) { return height - y(d.total); });
+
+			  // add the x Axis
+			  svg.append("g")
+			      .attr("transform", "translate(0," + height + ")")
+			      .call(d3.axisBottom(x));
+
+			  // add the y Axis
+			  svg.append("g")
+			      .call(d3.axisLeft(y));
 
 			}); //end of function getjson
 	    } // end of function initialize graph
@@ -287,6 +282,8 @@ $(document).ready(function() {
         function initialize_trees() {
 
         	$.getJSON( root_api + "trees/" + map.getBounds().getSouth() + "/" + map.getBounds().getNorth() + "/" + map.getBounds().getWest() + "/" + map.getBounds().getEast(), function( data ) {
+
+
         		//create a variable to count the total number of trees displayed in the window
 					var total_trees = 0;
 					
