@@ -45,7 +45,6 @@ $(document).ready(function() {
 		var previous_nhood = -1;
     	$('#neighborhoods').multiselect({
     		onChange: function(option, select) {
-    			console.log(option);
     			if (previous_nhood != -1) {
     				map.removeLayer(neighborhoods[previous_nhood]);
     				// previous_nhood = option.val();
@@ -56,13 +55,24 @@ $(document).ready(function() {
 	    			// neighborhoods[previous_nhood].addTo(map);
 	    			// initialize_graph_common_genus(previous_nhood);
     			}
+    			else {
+    				console.log(previous_nhood);
+    				initialize_graph_common_genus(option.val());
+    			}
     			previous_nhood = option.val();
+    			if (previous_nhood == -1) {
+    				d3.select("#detail_neighborhood")
+    					.select("svg").remove();
+    			}
+    			else {
+    				update_graph_common_genus(previous_nhood);
+    			}
     			limits = neighborhoods[previous_nhood].getBounds();
     			map.fitBounds(limits);
     			clearallLayers();
     			initialize_trees();
     			neighborhoods[previous_nhood].addTo(map);
-    			initialize_graph_common_genus(previous_nhood);
+    			//initialize_graph_common_genus(previous_nhood);
     		}
     	});
 
@@ -224,22 +234,25 @@ $(document).ready(function() {
 		    });
 	    };
 
+	    //declare the variables for the two following functions
+	    var margin, x, y, svg;
+
 	    function initialize_graph_common_genus(nhood) {
-			var margin = {top: 20, right: 20, bottom: 70, left: 40},
+			margin = {top: 20, right: 20, bottom: 70, left: 40},
 			    width = parseInt(d3.select('#detail_neighborhood').style('width')) - margin.left - margin.right,
 			    height = parseInt(d3.select('#detail_neighborhood').style('height')) - margin.top - margin.bottom;
 
 			// set the ranges
-			var x = d3.scaleBand()
+			x = d3.scaleBand()
 			          .range([0, width])
 			          .padding(0.1);
-			var y = d3.scaleLinear()
+			y = d3.scaleLinear()
 			          .range([height, 0]);
 			          
 			// append the svg object to the body of the page
 			// append a 'group' element to 'svg'
 			// moves the 'group' element to the top left margin
-			var svg = d3.select("#detail_neighborhood").append("svg")
+			svg = d3.select("#detail_neighborhood").append("svg")
 			    .attr("width", width + margin.left + margin.right)
 			    .attr("height", height + margin.top + margin.bottom)
 			  .append("g")
@@ -247,6 +260,8 @@ $(document).ready(function() {
 			          "translate(" + margin.left + "," + margin.top + ")");
 
 			$.getJSON( root_api + "trees/common/neighborhood/" + nhood, function(data) {
+
+				console.log(data);
 
 				// format the data
 				  data.forEach(function(d) {
@@ -284,6 +299,44 @@ $(document).ready(function() {
 
 			}); //end of function getjson
 	    } // end of function initialize graph
+
+	    function update_graph_common_genus(nhood) {
+	    	$.getJSON( root_api + "trees/common/neighborhood/" + nhood, function(data) {
+
+				// format the data
+				  data.forEach(function(d) {
+				    d.total = +d.total;
+				  });
+
+				  // Scale the range of the data in the domains
+				  x.domain(data.map(function(d) { return d.genus; }));
+				  y.domain([0, d3.max(data, function(d) { return d.total; })]);
+
+			  // append the rectangles for the bar chart
+			  svg.selectAll(".bar")
+			      .data(data)
+			      .attr("x", function(d) { return x(d.genus); })
+			      .attr("width", x.bandwidth())
+			      .attr("y", function(d) { return y(d.total); })
+			      .attr("height", function(d) { return height - y(d.total); });
+
+			  // add the x Axis
+			  // svg.append("g")
+			  //     .attr("transform", "translate(0," + height + ")")
+			  //     .call(d3.axisBottom(x))
+			  //     .selectAll("text")
+				 //    .attr("y", 0)
+				 //    .attr("x", 9)
+				 //    .attr("dy", ".35em")
+				 //    .attr("transform", "rotate(90)")
+				 //    .style("text-anchor", "start");;
+
+			  // // add the y Axis
+			  // svg.append("g")
+			  //     .call(d3.axisLeft(y));
+
+			}); //end of function getjson
+	    } // end of update graph function
 
         function initialize_trees() {
 
