@@ -45,33 +45,58 @@ $(document).ready(function() {
 		var previous_nhood = -1;
     	$('#neighborhoods').multiselect({
     		onChange: function(option, select) {
-    			if (previous_nhood != -1) {
-    				map.removeLayer(neighborhoods[previous_nhood]);
-    				// previous_nhood = option.val();
-	    			// limits = neighborhoods[previous_nhood].getBounds();
-	    			// map.fitBounds(limits);
-	    			// clearallLayers();
-	    			// initialize_trees();
-	    			// neighborhoods[previous_nhood].addTo(map);
-	    			// initialize_graph_common_genus(previous_nhood);
-    			}
-    			else {
-    				console.log(previous_nhood);
-    				initialize_graph_common_genus(option.val());
-    			}
-    			previous_nhood = option.val();
+    			var current_nhood = option.val();
     			if (previous_nhood == -1) {
-    				d3.select("#detail_neighborhood")
-    					.select("svg").remove();
+    				initialize_graph_common_genus(current_nhood);
+    				limits = neighborhoods[current_nhood].getBounds();
+	    			map.fitBounds(limits);
+	    			clearallLayers();
+	    			initialize_trees();
+	    			neighborhoods[current_nhood].addTo(map);
     			}
     			else {
-    				update_graph_common_genus(previous_nhood);
+    				map.removeLayer(neighborhoods[previous_nhood]);
+    				if (current_nhood == -1) {
+    					d3.select("#detail_neighborhood")
+    					.select("svg").remove();
+    				}
+    				else {
+    					limits = neighborhoods[current_nhood].getBounds();
+		    			map.fitBounds(limits);
+		    			clearallLayers();
+		    			initialize_trees();
+		    			neighborhoods[current_nhood].addTo(map);
+		    			update_graph_common_genus(current_nhood);
+    				}
     			}
-    			limits = neighborhoods[previous_nhood].getBounds();
-    			map.fitBounds(limits);
-    			clearallLayers();
-    			initialize_trees();
-    			neighborhoods[previous_nhood].addTo(map);
+    			previous_nhood = current_nhood;
+    			// if (previous_nhood != -1) {
+    			// 	map.removeLayer(neighborhoods[previous_nhood]);
+    			// 	// previous_nhood = option.val();
+	    		// 	// limits = neighborhoods[previous_nhood].getBounds();
+	    		// 	// map.fitBounds(limits);
+	    		// 	// clearallLayers();
+	    		// 	// initialize_trees();
+	    		// 	// neighborhoods[previous_nhood].addTo(map);
+	    		// 	// initialize_graph_common_genus(previous_nhood);
+    			// }
+    			// else {
+    			// 	console.log(previous_nhood);
+    			// 	initialize_graph_common_genus(option.val());
+    			// }
+    			// previous_nhood = option.val();
+    			// if (previous_nhood == -1) {
+    			// 	d3.select("#detail_neighborhood")
+    			// 		.select("svg").remove();
+    			// }
+    			// else {
+    			// 	update_graph_common_genus(previous_nhood);
+    			// }
+    			// limits = neighborhoods[previous_nhood].getBounds();
+    			// map.fitBounds(limits);
+    			// clearallLayers();
+    			// initialize_trees();
+    			// neighborhoods[previous_nhood].addTo(map);
     			//initialize_graph_common_genus(previous_nhood);
     		}
     	});
@@ -235,12 +260,12 @@ $(document).ready(function() {
 	    };
 
 	    //declare the variables for the two following functions
-	    var margin, x, y, svg;
+	    var margin, x, y, svg, tip;
 
 	    function initialize_graph_common_genus(nhood) {
 			margin = {top: 20, right: 20, bottom: 70, left: 40},
 			    width = parseInt(d3.select('#detail_neighborhood').style('width')) - margin.left - margin.right,
-			    height = parseInt(d3.select('#detail_neighborhood').style('height')) - margin.top - margin.bottom;
+			    height = parseInt(d3.select('#detail_neighborhood').style('height'))/2 - margin.top - margin.bottom;
 
 			// set the ranges
 			x = d3.scaleBand()
@@ -258,6 +283,15 @@ $(document).ready(function() {
 			  .append("g")
 			    .attr("transform", 
 			          "translate(" + margin.left + "," + margin.top + ")");
+
+			tip = d3.tip()
+				  .attr('class', 'd3-tip')
+				  .offset([-10, 0])
+				  .html(function(d) {
+				    return "<strong>Number of trees:</strong> <span style='color:red'>" + d.total + "</span>";
+				  });
+
+			svg.call(tip);
 
 			$.getJSON( root_api + "trees/common/neighborhood/" + nhood, function(data) {
 
@@ -280,10 +314,13 @@ $(document).ready(function() {
 			      .attr("x", function(d) { return x(d.genus); })
 			      .attr("width", x.bandwidth())
 			      .attr("y", function(d) { return y(d.total); })
-			      .attr("height", function(d) { return height - y(d.total); });
+			      .attr("height", function(d) { return height - y(d.total); })
+			      .on('mouseover', tip.show)
+      			  .on('mouseout', tip.hide);
 
 			  // add the x Axis
 			  svg.append("g")
+			  	  .attr("class","xaxis")
 			      .attr("transform", "translate(0," + height + ")")
 			      .call(d3.axisBottom(x))
 			      .selectAll("text")
@@ -295,6 +332,7 @@ $(document).ready(function() {
 
 			  // add the y Axis
 			  svg.append("g")
+			      .attr("class","yaxis")
 			      .call(d3.axisLeft(y));
 
 			}); //end of function getjson
@@ -308,17 +346,36 @@ $(document).ready(function() {
 				    d.total = +d.total;
 				  });
 
+				  console.log(data);
+
 				  // Scale the range of the data in the domains
 				  x.domain(data.map(function(d) { return d.genus; }));
 				  y.domain([0, d3.max(data, function(d) { return d.total; })]);
 
 			  // append the rectangles for the bar chart
-			  svg.selectAll(".bar")
-			      .data(data)
-			      .attr("x", function(d) { return x(d.genus); })
-			      .attr("width", x.bandwidth())
-			      .attr("y", function(d) { return y(d.total); })
-			      .attr("height", function(d) { return height - y(d.total); });
+			  // svg.selectAll(".bar")
+			  //     .data(data)
+			  //     .attr("x", function(d) { return x(d.genus); })
+			  //     .attr("width", x.bandwidth())
+			  //     .attr("y", function(d) { return y(d.total); })
+			  //     .attr("height", function(d) { return height - y(d.total); });
+
+			    // Make the changes
+			        svg.select(".bar")
+			        	.data(data)   // change the line
+			        	.transition()
+			            .duration(750)
+					      .attr("x", function(d) { return x(d.genus); })
+					      .attr("width", x.bandwidth())
+					      .attr("y", function(d) { return y(d.total); })
+					      .attr("height", function(d) { return height - y(d.total); });
+			        
+			        svg.select(".xaxis").transition() // change the x axis
+			            .duration(750)
+			            .call(d3.axisBottom(x));
+			        svg.select(".yaxis").transition() // change the y axis
+			            .duration(750)
+			            .call(d3.axisLeft(y));
 
 			  // add the x Axis
 			  // svg.append("g")
