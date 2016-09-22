@@ -70,34 +70,7 @@ $(document).ready(function() {
     				}
     			}
     			previous_nhood = current_nhood;
-    			// if (previous_nhood != -1) {
-    			// 	map.removeLayer(neighborhoods[previous_nhood]);
-    			// 	// previous_nhood = option.val();
-	    		// 	// limits = neighborhoods[previous_nhood].getBounds();
-	    		// 	// map.fitBounds(limits);
-	    		// 	// clearallLayers();
-	    		// 	// initialize_trees();
-	    		// 	// neighborhoods[previous_nhood].addTo(map);
-	    		// 	// initialize_graph_common_genus(previous_nhood);
-    			// }
-    			// else {
-    			// 	console.log(previous_nhood);
-    			// 	initialize_graph_common_genus(option.val());
-    			// }
-    			// previous_nhood = option.val();
-    			// if (previous_nhood == -1) {
-    			// 	d3.select("#detail_neighborhood")
-    			// 		.select("svg").remove();
-    			// }
-    			// else {
-    			// 	update_graph_common_genus(previous_nhood);
-    			// }
-    			// limits = neighborhoods[previous_nhood].getBounds();
-    			// map.fitBounds(limits);
-    			// clearallLayers();
-    			// initialize_trees();
-    			// neighborhoods[previous_nhood].addTo(map);
-    			//initialize_graph_common_genus(previous_nhood);
+
     		}
     	});
 
@@ -308,7 +281,7 @@ $(document).ready(function() {
 
 			  // append the rectangles for the bar chart
 			  svg.selectAll(".bar")
-			      .data(data)
+			      .data(data, function(d) { return d.genus; })
 			    .enter().append("rect")
 			      .attr("class", "bar")
 			      .attr("x", function(d) { return x(d.genus); })
@@ -339,61 +312,71 @@ $(document).ready(function() {
 	    } // end of function initialize graph
 
 	    function update_graph_common_genus(nhood) {
-	    	$.getJSON( root_api + "trees/common/neighborhood/" + nhood, function(data) {
+
+	    	 $.getJSON( root_api + "trees/common/neighborhood/" + nhood, function(data) {
 
 				// format the data
 				  data.forEach(function(d) {
 				    d.total = +d.total;
 				  });
 
-				  console.log(data);
-
 				  // Scale the range of the data in the domains
 				  x.domain(data.map(function(d) { return d.genus; }));
 				  y.domain([0, d3.max(data, function(d) { return d.total; })]);
 
-			  // append the rectangles for the bar chart
-			  // svg.selectAll(".bar")
-			  //     .data(data)
-			  //     .attr("x", function(d) { return x(d.genus); })
-			  //     .attr("width", x.bandwidth())
-			  //     .attr("y", function(d) { return y(d.total); })
-			  //     .attr("height", function(d) { return height - y(d.total); });
+				  var bar = svg.selectAll(".bar")
+        			.data(data, function(d) { return d.genus; });
 
-			    // Make the changes
-			        svg.select(".bar")
-			        	.data(data)   // change the line
-			        	.transition()
+        		//enter new data
+        		bar.enter().append("rect")
+				   .attr("class", "bar")
+				   .on('mouseover', tip.show)
+       			   .on('mouseout', tip.hide)
+       			   .transition()
+       			   		.duration(750)
+					   .attr("x", function(d) { return x(d.genus); })
+					   .attr("y", function(d) { return y(d.total); })
+					   .attr("height", function(d) { return height - y(d.total); })
+					   .attr("width", x.bandwidth());
+
+        		//remove the bars not corresponding to new genus
+        		bar.exit().remove();
+
+        		//update bars already present
+        		bar
+        			.transition()
+       			   		.duration(750)
+						   .attr("x", function(d) { return x(d.genus); })
+							.attr("y", function(d) { return y(d.total); })
+							.attr("height", function(d) { return height - y(d.total); })
+							.attr("width", x.bandwidth());
+
+				//remove preivous axes
+				svg.select(".yaxis").remove();
+				svg.select(".xaxis").remove();
+
+				//draw x axis
+				svg.append("g")
+				  	  .attr("class","xaxis")
+				      .attr("transform", "translate(0," + height + ")")
+				      .call(d3.axisBottom(x))
+				      .selectAll("text")
+					    .attr("y", 0)
+					    .attr("x", 9)
+					    .attr("dy", ".35em")
+					    .attr("transform", "rotate(90)")
+					    .style("text-anchor", "start"); 
+
+				//draw y axis
+				svg.append("g")
+				      .attr("class","yaxis")
+				      .transition() // change the y axis
 			            .duration(750)
-					      .attr("x", function(d) { return x(d.genus); })
-					      .attr("width", x.bandwidth())
-					      .attr("y", function(d) { return y(d.total); })
-					      .attr("height", function(d) { return height - y(d.total); });
-			        
-			        svg.select(".xaxis").transition() // change the x axis
-			            .duration(750)
-			            .call(d3.axisBottom(x));
-			        svg.select(".yaxis").transition() // change the y axis
-			            .duration(750)
-			            .call(d3.axisLeft(y));
+				      	.call(d3.axisLeft(y));
 
-			  // add the x Axis
-			  // svg.append("g")
-			  //     .attr("transform", "translate(0," + height + ")")
-			  //     .call(d3.axisBottom(x))
-			  //     .selectAll("text")
-				 //    .attr("y", 0)
-				 //    .attr("x", 9)
-				 //    .attr("dy", ".35em")
-				 //    .attr("transform", "rotate(90)")
-				 //    .style("text-anchor", "start");;
+			}); //end of getjson function
 
-			  // // add the y Axis
-			  // svg.append("g")
-			  //     .call(d3.axisLeft(y));
-
-			}); //end of function getjson
-	    } // end of update graph function
+	    } // end of function update graph common genus
 
         function initialize_trees() {
 
