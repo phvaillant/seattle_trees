@@ -17,6 +17,12 @@ var treeicon = L.icon({
     popupAnchor: new L.Point(0, -10)
 });
 
+var treeicon_red = L.icon({
+    iconUrl: 'img/tree_red.png',
+    iconSize: new L.Point(30, 30),
+    popupAnchor: new L.Point(0, -10)
+});
+
 //save the geojson feature of each neighborhood
 var neighborhoods = {};
 
@@ -235,6 +241,9 @@ $(document).ready(function() {
 	    //declare the variables for the two following functions
 	    var margin, x, y, svg, tip;
 
+	    //store previous layer clicked
+	    var previous_layer = L.layerGroup();
+
 	    function initialize_graph_common_genus(nhood) {
 			margin = {top: 20, right: 20, bottom: 70, left: 40},
 			    width = parseInt(d3.select('#detail_neighborhood').style('width')) - margin.left - margin.right,
@@ -288,8 +297,23 @@ $(document).ready(function() {
 			      .attr("width", x.bandwidth())
 			      .attr("y", function(d) { return y(d.total); })
 			      .attr("height", function(d) { return height - y(d.total); })
-			      .on('mouseover', tip.show)
-      			  .on('mouseout', tip.hide);
+      			  .on('mouseover', function(d,i) {
+      			  	previous_marker.setIcon(treeicon);
+      			  	tip.show(d,i);
+      			  	previous_layer.eachLayer(function(marker) {
+      			  		marker.setIcon(treeicon);
+      			  	});
+      			  	mapLayerGroups[d.genus].eachLayer(function(marker) {
+      			  		marker.setIcon(treeicon_red);
+      			  	});
+      			  	previous_layer = mapLayerGroups[d.genus];
+      			  })
+      			  .on('mouseout', function(d,i) {
+      			  	tip.hide(d,i);
+      			  	previous_layer.eachLayer(function(marker) {
+      			  		marker.setIcon(treeicon);
+      			  	});
+      			  });
 
 			  // add the x Axis
 			  svg.append("g")
@@ -378,6 +402,9 @@ $(document).ready(function() {
 
 	    } // end of function update graph common genus
 
+	    //store previous clicked_marker to color back in green
+	    var previous_marker = L.marker();
+
         function initialize_trees() {
 
         	$.getJSON( root_api + "trees/" + map.getBounds().getSouth() + "/" + map.getBounds().getNorth() + "/" + map.getBounds().getWest() + "/" + map.getBounds().getEast(), function( data ) {
@@ -401,7 +428,7 @@ $(document).ready(function() {
 					    } // end of if condition
 
 					    //Create markers with the customized icon.
-					    var marker = L.marker([v.point_y, v.point_x],{icon: treeicon})
+					    var marker = L.marker([v.point_y, v.point_x],{icon: treeicon});
 
 						marker.bindPopup(v.new_common_nam);
 						marker.on('mouseover', function (e) {
@@ -414,6 +441,9 @@ $(document).ready(function() {
 				        marker.on('click', function() {
 				        	$.getJSON( root_api + "trees/description/" + v.compkey, function(data) {
 				        		tree_info = data[0];
+				        		previous_marker.setIcon(treeicon);
+				        		previous_marker = marker;
+				        		marker.setIcon(treeicon_red);
 				        		var planted_da;
 				        		var last_verif;
 				        		if (tree_info.planted_da) {
