@@ -241,9 +241,6 @@ $(document).ready(function() {
 	    //declare the variables for the two following functions
 	    var margin, x, y, svg, tip;
 
-	    //store previous layer clicked
-	    var previous_layer = L.layerGroup();
-
 	    function initialize_graph_common_genus(nhood) {
 			margin = {top: 20, right: 20, bottom: 70, left: 40},
 			    width = parseInt(d3.select('#detail_neighborhood').style('width')) - margin.left - margin.right,
@@ -300,17 +297,13 @@ $(document).ready(function() {
       			  .on('mouseover', function(d,i) {
       			  	previous_marker.setIcon(treeicon);
       			  	tip.show(d,i);
-      			  	previous_layer.eachLayer(function(marker) {
-      			  		marker.setIcon(treeicon);
-      			  	});
       			  	mapLayerGroups[d.genus].eachLayer(function(marker) {
       			  		marker.setIcon(treeicon_red);
       			  	});
-      			  	previous_layer = mapLayerGroups[d.genus];
       			  })
       			  .on('mouseout', function(d,i) {
       			  	tip.hide(d,i);
-      			  	previous_layer.eachLayer(function(marker) {
+      			  	mapLayerGroups[d.genus].eachLayer(function(marker) {
       			  		marker.setIcon(treeicon);
       			  	});
       			  });
@@ -354,8 +347,19 @@ $(document).ready(function() {
         		//enter new data
         		bar.enter().append("rect")
 				   .attr("class", "bar")
-				   .on('mouseover', tip.show)
-       			   .on('mouseout', tip.hide)
+				   .on('mouseover', function(d,i) {
+	      			  	previous_marker.setIcon(treeicon);
+	      			  	tip.show(d,i);
+	      			  	mapLayerGroups[d.genus].eachLayer(function(marker) {
+	      			  		marker.setIcon(treeicon_red);
+	      			  	});
+	      			  })
+      			  .on('mouseout', function(d,i) {
+      			  	tip.hide(d,i);
+      			  	mapLayerGroups[d.genus].eachLayer(function(marker) {
+	      			  		marker.setIcon(treeicon);
+	      			  	})
+      			    })
        			   .transition()
        			   		.duration(750)
 					   .attr("x", function(d) { return x(d.genus); })
