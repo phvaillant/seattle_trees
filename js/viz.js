@@ -47,6 +47,15 @@ $(document).ready(function() {
 		//add tile to your map
 		your_tile.addTo(map);
 
+		//margin function for the graph
+		var margin = {top: 20, right: 20, bottom: 70, left: 40};
+
+		// //declare the variables for the graph functions
+	    var x, y, svg, chart, tip;
+
+		//resize svg on resize / use of leaflet map event because conflict with d3 and jquery resize event
+		map.on('resize', resize_graph_common_genus);
+
 		//store previous nhood for layer display
 		var previous_nhood = -1;
     	$('#neighborhoods').multiselect({
@@ -232,36 +241,31 @@ $(document).ready(function() {
 		    		$("#neighborhoods").multiselect("rebuild");
 		    		neighborhoods[key] = L.geoJson(val);
 				}); //end of each function
-		    	// add GeoJSON layer to the map once the file is loaded
-		    	//neighborhoods[] = L.geoJson(data)
-		    	//neighborhoods.addTo(map);
 		    });
-	    };
-
-	    //declare the variables for the two following functions
-	    var margin, x, y, svg, tip;
+	    }; //end of initialize neighborhood function
 
 	    function initialize_graph_common_genus(nhood) {
-			margin = {top: 20, right: 20, bottom: 70, left: 40},
-			    width = parseInt(d3.select('#detail_neighborhood').style('width')) - margin.left - margin.right,
-			    height = parseInt(d3.select('#detail_neighborhood').style('height'))/2 - margin.top - margin.bottom;
+
+			width = parseInt(d3.select('#detail_neighborhood').style('width')) - margin.left - margin.right,
+			height = parseInt(d3.select('#detail_neighborhood').style('height'))/2 - margin.top - margin.bottom;
 
 			// set the ranges
 			x = d3.scaleBand()
-			          .range([0, width])
-			          .padding(0.1);
+				          .range([0, width])
+				          .padding(0.1);
 			y = d3.scaleLinear()
-			          .range([height, 0]);
-			          
+				          .range([height, 0]);
+				          
 			// append the svg object to the body of the page
 			// append a 'group' element to 'svg'
 			// moves the 'group' element to the top left margin
 			svg = d3.select("#detail_neighborhood").append("svg")
-			    .attr("width", width + margin.left + margin.right)
-			    .attr("height", height + margin.top + margin.bottom)
-			  .append("g")
-			    .attr("transform", 
-			          "translate(" + margin.left + "," + margin.top + ")");
+				    .attr("width", width + margin.left + margin.right)
+				    .attr("height", height + margin.top + margin.bottom);
+			
+			chart = svg.append("g")
+				    .attr("transform", 
+				          "translate(" + margin.left + "," + margin.top + ")");
 
 			tip = d3.tip()
 				  .attr('class', 'd3-tip')
@@ -274,8 +278,6 @@ $(document).ready(function() {
 
 			$.getJSON( root_api + "trees/common/neighborhood/" + nhood, function(data) {
 
-				console.log(data);
-
 				// format the data
 				  data.forEach(function(d) {
 				    d.total = +d.total;
@@ -286,7 +288,7 @@ $(document).ready(function() {
 				  y.domain([0, d3.max(data, function(d) { return d.total; })]);
 
 			  // append the rectangles for the bar chart
-			  svg.selectAll(".bar")
+			  chart.selectAll(".bar")
 			      .data(data, function(d) { return d.genus; })
 			    .enter().append("rect")
 			      .attr("class", "bar")
@@ -309,7 +311,7 @@ $(document).ready(function() {
       			  });
 
 			  // add the x Axis
-			  svg.append("g")
+			  chart.append("g")
 			  	  .attr("class","xaxis")
 			      .attr("transform", "translate(0," + height + ")")
 			      .call(d3.axisBottom(x))
@@ -321,7 +323,7 @@ $(document).ready(function() {
 				    .style("text-anchor", "start");;
 
 			  // add the y Axis
-			  svg.append("g")
+			  chart.append("g")
 			      .attr("class","yaxis")
 			      .call(d3.axisLeft(y));
 
@@ -341,7 +343,7 @@ $(document).ready(function() {
 				  x.domain(data.map(function(d) { return d.genus; }));
 				  y.domain([0, d3.max(data, function(d) { return d.total; })]);
 
-				  var bar = svg.selectAll(".bar")
+				  var bar = chart.selectAll(".bar")
         			.data(data, function(d) { return d.genus; });
 
         		//enter new data
@@ -371,8 +373,7 @@ $(document).ready(function() {
         		bar.exit().remove();
 
         		//update bars already present
-        		bar
-        			.transition()
+        		bar.transition()
        			   		.duration(750)
 						   .attr("x", function(d) { return x(d.genus); })
 							.attr("y", function(d) { return y(d.total); })
@@ -380,11 +381,11 @@ $(document).ready(function() {
 							.attr("width", x.bandwidth());
 
 				//remove preivous axes
-				svg.select(".yaxis").remove();
-				svg.select(".xaxis").remove();
+				chart.select(".yaxis").remove();
+				chart.select(".xaxis").remove();
 
 				//draw x axis
-				svg.append("g")
+				chart.append("g")
 				  	  .attr("class","xaxis")
 				      .attr("transform", "translate(0," + height + ")")
 				      .call(d3.axisBottom(x))
@@ -396,7 +397,7 @@ $(document).ready(function() {
 					    .style("text-anchor", "start"); 
 
 				//draw y axis
-				svg.append("g")
+				chart.append("g")
 				      .attr("class","yaxis")
 				      .transition() // change the y axis
 			            .duration(750)
@@ -405,6 +406,33 @@ $(document).ready(function() {
 			}); //end of getjson function
 
 	    } // end of function update graph common genus
+
+	    function resize_graph_common_genus() {
+
+	    	width = parseInt(d3.select('#detail_neighborhood').style('width')) - margin.left - margin.right,
+			height = parseInt(d3.select('#detail_neighborhood').style('height'))/2 - margin.top - margin.bottom;
+
+			// set the ranges
+			x.range([0, width]);			
+			y.range([height, 0]);
+
+			 svg.attr("width", width + margin.left + margin.right)
+			    .attr("height", height + margin.top + margin.bottom);
+
+			 chart.attr("width", width + margin.left + margin.right)
+			    .attr("height", height + margin.top + margin.bottom);
+
+			 chart.selectAll(".bar")
+			      .attr("x", function(d) { return x(d.genus); })
+			      .attr("width", x.bandwidth())
+			      .attr("y", function(d) { return y(d.total); })
+			      .attr("height", function(d) { return height - y(d.total); })
+
+			 chart.select(".xaxis").attr("transform", "translate(0," + height + ")")
+			 				.call(d3.axisBottom(x));
+			 chart.select(".yaxis").call(d3.axisLeft(y));
+
+	    } // end of function resize graph common genus
 
 	    //store previous clicked_marker to color back in green
 	    var previous_marker = L.marker();
