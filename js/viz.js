@@ -43,7 +43,10 @@ var x_genus = d3.scaleBand(),
 	svg_date, chart_date,
 	height,
 	line = d3.line().x(function(d) { return x_date(new Date(d.planted_da)); })
-					    .y(function(d) { return y(+d.total); });
+					    .y(function(d) { return y(+d.total); }),
+	//Divides date for tooltip placement
+	bisectDate = d3.bisector(function(d) { return d.planted_da; }).left,
+	focus;
 
 //https://learn.jquery.com/using-jquery-core/document-ready/
 $(document).ready(function() {
@@ -64,9 +67,6 @@ $(document).ready(function() {
 		//margin function for the graph
 		var margin = {top: 20, right: 20, bottom: 70, left: 40};
 
-		// //declare the variables for the graph functions
-	    //var x, y, svg, chart, tip;
-
 		//resize svg on resize / use of leaflet map event because conflict with d3 and jquery resize event
 		map.on('resize', resize_graphs);
 
@@ -79,8 +79,6 @@ $(document).ready(function() {
 
     			if (previous_nhood == -1) {
     				initialize_graphs(current_nhood);
-    				//initialize_graph_common_genus(current_nhood);
-    				//initialize_graph_date(current_nhood);
     				limits = neighborhoods[current_nhood].getBounds();
 	    			map.fitBounds(limits);
 	    			clearallLayers();
@@ -106,8 +104,6 @@ $(document).ready(function() {
 		    			initialize_trees();
 		    			neighborhoods[current_nhood].addTo(map);
 		    			update_graphs(current_nhood);
-		    			//update_graph_date(current_nhood);
-		    			//update_graph_common_genus(current_nhood);
     				}
 
     			}
@@ -379,6 +375,40 @@ $(document).ready(function() {
 				  x_date.domain(d3.extent(data, function(d) { return new Date(d.planted_da); }));
 				  y.domain(d3.extent(data, function(d) { return +d.total; }));
 
+				  //Tooltips
+				  focus = chart_date.append("g")
+				      .attr("class", "focus")
+				      .style("display", "none");
+
+				  //Adds circle to focus point on line
+				  focus.append("circle")
+				      .attr("r", 4);
+
+				  //Adds text to focus point on line    
+				  focus.append("text")
+				      .attr("x", 9)
+				      .attr("dy", ".35em");    
+				  
+				  //Creates larger area for tooltip   
+				  var overlay = chart_date.append("rect")
+				      .attr("class", "overlay")
+				      .attr("width", width)
+				      .attr("height", height)
+				      .on("mouseover", function() { focus.style("display", null); })
+				      .on("mouseout", function() { focus.style("display", "none"); })
+				      .on("mousemove", mousemove);
+				  
+				  //Tooltip mouseovers            
+				  function mousemove() {
+				    var x0 = x_date.invert(d3.mouse(this)[0]),
+				        i = bisectDate(data, x0, 1),
+				        d0 = data[i - 1],
+				        d1 = data[i],
+				        d = x0 - d0.planted_da > d1.planted_da - x0 ? d1 : d0;
+				    focus.attr("transform", "translate(" + x_date(d.planted_da) + "," + y(d.total) + ")");
+				    focus.select("text").text(d.total);
+				  }; 
+
 				  chart_date.append("g")
 				      .attr("class", "xaxis")
 				      .attr("transform", "translate(0," + height + ")")
@@ -440,9 +470,24 @@ $(document).ready(function() {
 						    .attr("dy", ".35em")
 						    .attr("transform", "rotate(90)")
 						    .style("text-anchor", "start"); ;
+
 			          svg_date.transition().select(".yaxis") // change the y axis
 			            .duration(750)
 			            .call(d3.axisLeft(y));
+
+			          chart_date.select(".overlay")
+			          			.on("mousemove",mousemove);
+
+			          //Tooltip mouseovers            
+					  function mousemove() {
+					    var x0 = x_date.invert(d3.mouse(this)[0]),
+					        i = bisectDate(data, x0, 1),
+					        d0 = data[i - 1],
+					        d1 = data[i],
+					        d = x0 - d0.planted_da > d1.planted_da - x0 ? d1 : d0;
+					    focus.attr("transform", "translate(" + x_date(d.planted_da) + "," + y(d.total) + ")");
+					    focus.select("text").text(d.total);
+					  }; 
 
 				}); //end of getjson function
 
