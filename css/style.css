@@ -15,6 +15,10 @@ html, body, .container{
 	height: 100%;
 }
 
+#chart_genus, #chart_date {
+	height: calc(50% - 27px);
+}
+
 .tab-content {
 	height: calc(100% - 40px);
 	overflow-y: scroll;
@@ -58,6 +62,12 @@ html, body, .container{
 }
 
 .bar { fill: steelblue; }
+
+.line {
+  fill: none;
+  stroke: steelblue;
+  stroke-width: 1.5px;
+}
 
 .bar:hover {
   fill: orangered ;

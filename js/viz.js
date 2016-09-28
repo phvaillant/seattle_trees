@@ -63,6 +63,7 @@ $(document).ready(function() {
     			var current_nhood = option.val();
     			if (previous_nhood == -1) {
     				initialize_graph_common_genus(current_nhood);
+    				initialize_graph_date(current_nhood);
     				limits = neighborhoods[current_nhood].getBounds();
 	    			map.fitBounds(limits);
 	    			clearallLayers();
@@ -72,7 +73,9 @@ $(document).ready(function() {
     			else {
     				map.removeLayer(neighborhoods[previous_nhood]);
     				if (current_nhood == -1) {
-    					d3.select("#detail_neighborhood")
+    					d3.select("#chart_genus")
+    					.select("svg").remove();
+    					d3.select("#chart_date")
     					.select("svg").remove();
     				}
     				else {
@@ -81,6 +84,7 @@ $(document).ready(function() {
 		    			clearallLayers();
 		    			initialize_trees();
 		    			neighborhoods[current_nhood].addTo(map);
+		    			update_graph_date(current_nhood);
 		    			update_graph_common_genus(current_nhood);
     				}
     			}
@@ -246,8 +250,8 @@ $(document).ready(function() {
 
 	    function initialize_graph_common_genus(nhood) {
 
-			width = parseInt(d3.select('#detail_neighborhood').style('width')) - margin.left - margin.right,
-			height = parseInt(d3.select('#detail_neighborhood').style('height'))/2 - margin.top - margin.bottom;
+			width = parseInt(d3.select('#chart_genus').style('width')) - margin.left - margin.right,
+			height = parseInt(d3.select('#chart_genus').style('height')) - margin.top - margin.bottom;
 
 			// set the ranges
 			x = d3.scaleBand()
@@ -259,7 +263,7 @@ $(document).ready(function() {
 			// append the svg object to the body of the page
 			// append a 'group' element to 'svg'
 			// moves the 'group' element to the top left margin
-			svg = d3.select("#detail_neighborhood").append("svg")
+			svg = d3.select("#chart_genus").append("svg")
 				    .attr("width", width + margin.left + margin.right)
 				    .attr("height", height + margin.top + margin.bottom);
 			
@@ -276,8 +280,11 @@ $(document).ready(function() {
 
 			svg.call(tip);
 
+			console.log(root_api + "trees/common/neighborhood/" + nhood);
+
 			$.getJSON( root_api + "trees/common/neighborhood/" + nhood, function(data) {
 
+				console.log(data);
 				// format the data
 				  data.forEach(function(d) {
 				    d.total = +d.total;
@@ -409,8 +416,8 @@ $(document).ready(function() {
 
 	    function resize_graph_common_genus() {
 
-	    	width = parseInt(d3.select('#detail_neighborhood').style('width')) - margin.left - margin.right,
-			height = parseInt(d3.select('#detail_neighborhood').style('height'))/2 - margin.top - margin.bottom;
+	    	width = parseInt(d3.select('#chart_genus').style('width')) - margin.left - margin.right,
+			height = parseInt(d3.select('#chart_genus').style('height')) - margin.top - margin.bottom;
 
 			// set the ranges
 			x.range([0, width]);			
@@ -433,6 +440,96 @@ $(document).ready(function() {
 			 chart.select(".yaxis").call(d3.axisLeft(y));
 
 	    } // end of function resize graph common genus
+
+	    function initialize_graph_date(nhood) {
+
+			var width = parseInt(d3.select('#chart_date').style('width')) - margin.left - margin.right,
+			height = parseInt(d3.select('#chart_date').style('height')) - margin.top - margin.bottom;
+
+			var timeFormat = d3.timeFormat("%Y-%m");
+
+			var x = d3.scaleTime()
+			    .range([0, width]);
+
+			var y = d3.scaleLinear()
+			    .range([height, 0]);
+
+			var line = d3.line()
+			    .x(function(d) { return x(new Date(d.planted_da)); })
+			    .y(function(d) { return y(+d.total); });
+
+			var svg = d3.select("#chart_date").append("svg")
+			    .attr("width", width + margin.left + margin.right)
+			    .attr("height", height + margin.top + margin.bottom)
+			  .append("g")
+			    .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+			$.getJSON( root_api + "trees/date/neighborhood/" + nhood, function(data) {
+
+			  x.domain(d3.extent(data, function(d) { return new Date(d.planted_da); }));
+			  y.domain(d3.extent(data, function(d) { return +d.total; }));
+
+			  svg.append("g")
+			      .attr("class", "axis axis--x")
+			      .attr("transform", "translate(0," + height + ")")
+			      .call(d3.axisBottom(x))
+			      .selectAll("text")
+					    .attr("y", 0)
+					    .attr("x", 9)
+					    .attr("dy", ".35em")
+					    .attr("transform", "rotate(90)")
+					    .style("text-anchor", "start"); ;
+
+			  svg.append("g")
+			      .attr("class", "axis axis--y")
+			      .call(d3.axisLeft(y))
+			    .append("text")
+			      .attr("class", "axis-title")
+			      .attr("transform", "rotate(-90)")
+			      .attr("y", 6)
+			      .attr("dy", ".71em")
+			      .style("text-anchor", "end")
+			      .text("Number of trees planted");
+
+			  svg.append("path")
+			      .datum(data)
+			      .attr("class", "line")
+			      .attr("d", line);
+			}); //end of getjson function
+
+	    } // end of function initialize graph date
+
+	    function update_graph_date(nhood) {
+
+	    	var x = d3.scaleTime()
+			    .range([0, width]);
+
+	    	 $.getJSON( root_api + "trees/date/neighborhood/" + nhood, function(data) {
+
+				  // Scale the range of the data in the domains
+				  x.domain(d3.extent(data, function(d) { return new Date(d.planted_da); }));
+			  	  y.domain(d3.extent(data, function(d) { return +d.total; }));
+
+			  	  var line = d3.line()
+			    	.x(function(d) { return x(new Date(d.planted_da)); })
+			    	.y(function(d) { return y(+d.total); });
+
+			  	  var svg = d3.select("#chart_date").transition();
+
+				  svg.select(".line")
+				       // change the line
+		            .duration(750)
+		            .attr("d", line(data));
+		        svg.select(".axis--x") // change the x axis
+		            .duration(750)
+		            .call(d3.axisBottom(x));
+		        svg.select(".axis--y") // change the y axis
+		            .duration(750)
+		            .call(d3.axisLeft(y));
+
+			}); //end of getjson function
+
+	    } // end of function update graph date
 
 	    //store previous clicked_marker to color back in green
 	    var previous_marker = L.marker();
