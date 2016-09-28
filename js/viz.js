@@ -31,6 +31,20 @@ var your_tile = L.tileLayer('http://stamen-tiles-{s}.a.ssl.fastly.net/watercolor
 	attribution: 'Map tiles by <a href="http://stamen.com">Stamen Design</a>, <a href="http://creativecommons.org/licenses/by/3.0">CC BY 3.0</a> &mdash; Map data &copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>'
 	,ext: 'png', minZoom:15, maxZoom:20});
 
+//format for date - used later in date grpah
+var timeFormat = d3.timeFormat("%Y-%m");
+
+//store some variables for drawing, updating and resizing the graphs
+var x_genus = d3.scaleBand(),
+	x_date = d3.scaleTime(),
+	y = d3.scaleLinear(),
+	tip = d3.tip(),
+	svg_genus, chart_genus,
+	svg_date, chart_date,
+	height,
+	line = d3.line().x(function(d) { return x_date(new Date(d.planted_da)); })
+					    .y(function(d) { return y(+d.total); });
+
 //https://learn.jquery.com/using-jquery-core/document-ready/
 $(document).ready(function() {
 
@@ -51,43 +65,53 @@ $(document).ready(function() {
 		var margin = {top: 20, right: 20, bottom: 70, left: 40};
 
 		// //declare the variables for the graph functions
-	    var x, y, svg, chart, tip;
+	    //var x, y, svg, chart, tip;
 
 		//resize svg on resize / use of leaflet map event because conflict with d3 and jquery resize event
-		map.on('resize', resize_graph_common_genus);
+		map.on('resize', resize_graphs);
 
 		//store previous nhood for layer display
 		var previous_nhood = -1;
+
     	$('#neighborhoods').multiselect({
     		onChange: function(option, select) {
     			var current_nhood = option.val();
+
     			if (previous_nhood == -1) {
-    				initialize_graph_common_genus(current_nhood);
-    				initialize_graph_date(current_nhood);
+    				initialize_graphs(current_nhood);
+    				//initialize_graph_common_genus(current_nhood);
+    				//initialize_graph_date(current_nhood);
     				limits = neighborhoods[current_nhood].getBounds();
 	    			map.fitBounds(limits);
 	    			clearallLayers();
 	    			initialize_trees();
+	    			//show the layer of the neighborhood selected
 	    			neighborhoods[current_nhood].addTo(map);
     			}
+
     			else {
     				map.removeLayer(neighborhoods[previous_nhood]);
+
     				if (current_nhood == -1) {
     					d3.select("#chart_genus")
     					.select("svg").remove();
     					d3.select("#chart_date")
     					.select("svg").remove();
     				}
+
     				else {
     					limits = neighborhoods[current_nhood].getBounds();
 		    			map.fitBounds(limits);
 		    			clearallLayers();
 		    			initialize_trees();
 		    			neighborhoods[current_nhood].addTo(map);
-		    			update_graph_date(current_nhood);
-		    			update_graph_common_genus(current_nhood);
+		    			update_graphs(current_nhood);
+		    			//update_graph_date(current_nhood);
+		    			//update_graph_common_genus(current_nhood);
     				}
+
     			}
+
     			previous_nhood = current_nhood;
 
     		}
@@ -248,288 +272,318 @@ $(document).ready(function() {
 		    });
 	    }; //end of initialize neighborhood function
 
-	    function initialize_graph_common_genus(nhood) {
+	    function initialize_graphs(nhood) {
 
-			width = parseInt(d3.select('#chart_genus').style('width')) - margin.left - margin.right,
+	    	var width = parseInt(d3.select('#chart_genus').style('width')) - margin.left - margin.right;
+
 			height = parseInt(d3.select('#chart_genus').style('height')) - margin.top - margin.bottom;
 
 			// set the ranges
-			x = d3.scaleBand()
-				          .range([0, width])
+			x_genus.range([0, width])
 				          .padding(0.1);
-			y = d3.scaleLinear()
-				          .range([height, 0]);
-				          
-			// append the svg object to the body of the page
-			// append a 'group' element to 'svg'
-			// moves the 'group' element to the top left margin
-			svg = d3.select("#chart_genus").append("svg")
+
+			x_date.range([0, width]);
+
+			y.range([height, 0]);
+
+		    draw_graph_genus(nhood);
+
+		    draw_graph_date(nhood);
+
+		    function draw_graph_genus(nhood) {
+
+		    	svg_genus = d3.select("#chart_genus").append("svg")
 				    .attr("width", width + margin.left + margin.right)
 				    .attr("height", height + margin.top + margin.bottom);
 			
-			chart = svg.append("g")
-				    .attr("transform", 
-				          "translate(" + margin.left + "," + margin.top + ")");
+				chart_genus = svg_genus.append("g")
+							.attr("class","chart")
+					    	.attr("transform", 
+					          "translate(" + margin.left + "," + margin.top + ")");
 
-			tip = d3.tip()
-				  .attr('class', 'd3-tip')
-				  .offset([-10, 0])
-				  .html(function(d) {
-				    return "<strong>Number of trees:</strong> <span style='color:red'>" + d.total + "</span>";
-				  });
+				tip.attr('class', 'd3-tip')
+						  .offset([-10, 0])
+						  .html(function(d) {
+						    return "<strong>Number of trees:</strong> <span style='color:red'>" + d.total + "</span>";
+						  });
 
-			svg.call(tip);
+				svg_genus.call(tip);
 
-			console.log(root_api + "trees/common/neighborhood/" + nhood);
+				$.getJSON( root_api + "trees/common/neighborhood/" + nhood, function(data) {
 
-			$.getJSON( root_api + "trees/common/neighborhood/" + nhood, function(data) {
+					// format the data
+					  data.forEach(function(d) {
+					    d.total = +d.total;
+					  });
 
-				console.log(data);
-				// format the data
-				  data.forEach(function(d) {
-				    d.total = +d.total;
-				  });
+					  // Scale the range of the data in the domains
+					  x_genus.domain(data.map(function(d) { return d.genus; }));
+					  y.domain([0, d3.max(data, function(d) { return d.total; })]);
 
-				  // Scale the range of the data in the domains
-				  x.domain(data.map(function(d) { return d.genus; }));
-				  y.domain([0, d3.max(data, function(d) { return d.total; })]);
+					  // append the rectangles for the bar chart
+					  chart_genus.selectAll(".bar")
+					      .data(data, function(d) { return d.genus; })
+					    .enter().append("rect")
+					      .attr("class", "bar")
+					      .attr("x", function(d) { return x_genus(d.genus); })
+					      .attr("width", x_genus.bandwidth())
+					      .attr("y", function(d) { return y(d.total); })
+					      .attr("height", function(d) { return height - y(d.total); })
+		      			  .on('mouseover', function(d,i) {
+		      			  	previous_marker.setIcon(treeicon);
+		      			  	tip.show(d,i);
+		      			  	mapLayerGroups[d.genus].eachLayer(function(marker) {
+		      			  		marker.setIcon(treeicon_red);
+		      			  	});
+		      			  })
+		      			  .on('mouseout', function(d,i) {
+		      			  	tip.hide(d,i);
+		      			  	mapLayerGroups[d.genus].eachLayer(function(marker) {
+		      			  		marker.setIcon(treeicon);
+		      			  	});
+		      			  });
 
-			  // append the rectangles for the bar chart
-			  chart.selectAll(".bar")
-			      .data(data, function(d) { return d.genus; })
-			    .enter().append("rect")
-			      .attr("class", "bar")
-			      .attr("x", function(d) { return x(d.genus); })
-			      .attr("width", x.bandwidth())
-			      .attr("y", function(d) { return y(d.total); })
-			      .attr("height", function(d) { return height - y(d.total); })
-      			  .on('mouseover', function(d,i) {
-      			  	previous_marker.setIcon(treeicon);
-      			  	tip.show(d,i);
-      			  	mapLayerGroups[d.genus].eachLayer(function(marker) {
-      			  		marker.setIcon(treeicon_red);
-      			  	});
-      			  })
-      			  .on('mouseout', function(d,i) {
-      			  	tip.hide(d,i);
-      			  	mapLayerGroups[d.genus].eachLayer(function(marker) {
-      			  		marker.setIcon(treeicon);
-      			  	});
-      			  });
+					  // add the x Axis
+					  chart_genus.append("g")
+					  	  .attr("class","xaxis")
+					      .attr("transform", "translate(0," + height + ")")
+					      .call(d3.axisBottom(x_genus))
+					      .selectAll("text")
+						    .attr("y", 0)
+						    .attr("x", 9)
+						    .attr("dy", ".35em")
+						    .attr("transform", "rotate(90)")
+						    .style("text-anchor", "start");;
 
-			  // add the x Axis
-			  chart.append("g")
-			  	  .attr("class","xaxis")
-			      .attr("transform", "translate(0," + height + ")")
-			      .call(d3.axisBottom(x))
-			      .selectAll("text")
-				    .attr("y", 0)
-				    .attr("x", 9)
-				    .attr("dy", ".35em")
-				    .attr("transform", "rotate(90)")
-				    .style("text-anchor", "start");;
+					  // add the y Axis
+					  chart_genus.append("g")
+					      .attr("class","yaxis")
+					      .call(d3.axisLeft(y));
 
-			  // add the y Axis
-			  chart.append("g")
-			      .attr("class","yaxis")
-			      .call(d3.axisLeft(y));
+				}); //end of function getjson
 
-			}); //end of function getjson
-	    } // end of function initialize graph
+	    	} // end of function draw_graph_genus
 
-	    function update_graph_common_genus(nhood) {
+	    	function draw_graph_date(nhood) {
 
-	    	 $.getJSON( root_api + "trees/common/neighborhood/" + nhood, function(data) {
+				svg_date = d3.select("#chart_date").append("svg")
+				    .attr("width", width + margin.left + margin.right)
+				    .attr("height", height + margin.top + margin.bottom)
+				  
+				chart_date = svg_date.append("g")
+				  	.attr("class","chart")
+				    .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 
-				// format the data
-				  data.forEach(function(d) {
-				    d.total = +d.total;
-				  });
+				$.getJSON( root_api + "trees/date/neighborhood/" + nhood, function(data) {
 
-				  // Scale the range of the data in the domains
-				  x.domain(data.map(function(d) { return d.genus; }));
-				  y.domain([0, d3.max(data, function(d) { return d.total; })]);
+				  x_date.domain(d3.extent(data, function(d) { return new Date(d.planted_da); }));
+				  y.domain(d3.extent(data, function(d) { return +d.total; }));
 
-				  var bar = chart.selectAll(".bar")
-        			.data(data, function(d) { return d.genus; });
-
-        		//enter new data
-        		bar.enter().append("rect")
-				   .attr("class", "bar")
-				   .on('mouseover', function(d,i) {
-	      			  	previous_marker.setIcon(treeicon);
-	      			  	tip.show(d,i);
-	      			  	mapLayerGroups[d.genus].eachLayer(function(marker) {
-	      			  		marker.setIcon(treeicon_red);
-	      			  	});
-	      			  })
-      			  .on('mouseout', function(d,i) {
-      			  	tip.hide(d,i);
-      			  	mapLayerGroups[d.genus].eachLayer(function(marker) {
-	      			  		marker.setIcon(treeicon);
-	      			  	})
-      			    })
-       			   .transition()
-       			   		.duration(750)
-					   .attr("x", function(d) { return x(d.genus); })
-					   .attr("y", function(d) { return y(d.total); })
-					   .attr("height", function(d) { return height - y(d.total); })
-					   .attr("width", x.bandwidth());
-
-        		//remove the bars not corresponding to new genus
-        		bar.exit().remove();
-
-        		//update bars already present
-        		bar.transition()
-       			   		.duration(750)
-						   .attr("x", function(d) { return x(d.genus); })
-							.attr("y", function(d) { return y(d.total); })
-							.attr("height", function(d) { return height - y(d.total); })
-							.attr("width", x.bandwidth());
-
-				//remove preivous axes
-				chart.select(".yaxis").remove();
-				chart.select(".xaxis").remove();
-
-				//draw x axis
-				chart.append("g")
-				  	  .attr("class","xaxis")
+				  chart_date.append("g")
+				      .attr("class", "xaxis")
 				      .attr("transform", "translate(0," + height + ")")
-				      .call(d3.axisBottom(x))
+				      .call(d3.axisBottom(x_date))
 				      .selectAll("text")
-					    .attr("y", 0)
-					    .attr("x", 9)
-					    .attr("dy", ".35em")
-					    .attr("transform", "rotate(90)")
-					    .style("text-anchor", "start"); 
+						    .attr("y", 0)
+						    .attr("x", 9)
+						    .attr("dy", ".35em")
+						    .attr("transform", "rotate(90)")
+						    .style("text-anchor", "start"); ;
 
-				//draw y axis
-				chart.append("g")
-				      .attr("class","yaxis")
-				      .transition() // change the y axis
+				  chart_date.append("g")
+				      .attr("class", "yaxis")
+				      .call(d3.axisLeft(y))
+				    .append("text")
+				      .attr("class", "axis-title")
+				      .attr("transform", "rotate(-90)")
+				      .attr("y", 6)
+				      .attr("dy", ".71em")
+				      .style("text-anchor", "end")
+				      .text("Number of trees planted");
+
+				  chart_date.append("path")
+				      .datum(data)
+				      .attr("class", "line")
+				      .attr("d", line);
+
+				}); //end of getjson function
+
+	    	} // end of function draw_graph_date
+
+	    } // end of function initialize_graphs
+
+	    function update_graphs(nhood) {
+
+	    	update_graph_genus(nhood);
+
+	    	update_graph_date(nhood);
+
+	    	function update_graph_date(nhood) {
+
+		    	 $.getJSON( root_api + "trees/date/neighborhood/" + nhood, function(data) {
+
+					  // Scale the range of the data in the domains
+					  x_date.domain(d3.extent(data, function(d) { return new Date(d.planted_da); }));
+				  	  y.domain(d3.extent(data, function(d) { return +d.total; }));
+
+				  	  svg = svg_date.select(".line").datum(data);
+					  svg.transition()
+					  		.duration(750)
+					        .attr("d", line);
+
+			          svg_date.transition().select(".xaxis") // change the x axis
 			            .duration(750)
-				      	.call(d3.axisLeft(y));
+			            .call(d3.axisBottom(x_date))
+			            .selectAll("text")
+						    .attr("y", 0)
+						    .attr("x", 9)
+						    .attr("dy", ".35em")
+						    .attr("transform", "rotate(90)")
+						    .style("text-anchor", "start"); ;
+			          svg_date.transition().select(".yaxis") // change the y axis
+			            .duration(750)
+			            .call(d3.axisLeft(y));
 
-			}); //end of getjson function
+				}); //end of getjson function
 
-	    } // end of function update graph common genus
+		    } // end of function update graph date
 
-	    function resize_graph_common_genus() {
+	    	function update_graph_genus(nhood) {
 
-	    	width = parseInt(d3.select('#chart_genus').style('width')) - margin.left - margin.right,
+	    		$.getJSON( root_api + "trees/common/neighborhood/" + nhood, function(data) {
+
+					// format the data
+					  data.forEach(function(d) {
+					    d.total = +d.total;
+					  });
+
+					  // Scale the range of the data in the domains
+					  x_genus.domain(data.map(function(d) { return d.genus; }));
+					  y.domain([0, d3.max(data, function(d) { return d.total; })]);
+
+					  var bar = chart_genus.selectAll(".bar")
+	        			.data(data, function(d) { return d.genus; });
+
+	        		//enter new data
+	        		bar.enter().append("rect")
+					   .attr("class", "bar")
+					   .on('mouseover', function(d,i) {
+		      			  	previous_marker.setIcon(treeicon);
+		      			  	tip.show(d,i);
+		      			  	mapLayerGroups[d.genus].eachLayer(function(marker) {
+		      			  		marker.setIcon(treeicon_red);
+		      			  	});
+		      			  })
+	      			  .on('mouseout', function(d,i) {
+	      			  	tip.hide(d,i);
+	      			  	mapLayerGroups[d.genus].eachLayer(function(marker) {
+		      			  		marker.setIcon(treeicon);
+		      			  	})
+	      			    })
+	       			   .transition()
+	       			   		.duration(750)
+						   .attr("x", function(d) { return x_genus(d.genus); })
+						   .attr("y", function(d) { return y(d.total); })
+						   .attr("height", function(d) { return height - y(d.total); })
+						   .attr("width", x_genus.bandwidth());
+
+	        		//remove the bars not corresponding to new genus
+	        		bar.exit().remove();
+
+	        		//update bars already present
+	        		bar.transition()
+	       			   		.duration(750)
+							   .attr("x", function(d) { return x_genus(d.genus); })
+								.attr("y", function(d) { return y(d.total); })
+								.attr("height", function(d) { return height - y(d.total); })
+								.attr("width", x_genus.bandwidth());
+
+					//remove preivous axes
+					chart_genus.select(".yaxis").remove();
+					chart_genus.select(".xaxis").remove();
+
+					//draw x axis
+					chart_genus.append("g")
+					  	  .attr("class","xaxis")
+					      .attr("transform", "translate(0," + height + ")")
+					      .call(d3.axisBottom(x_genus))
+					      .selectAll("text")
+						    .attr("y", 0)
+						    .attr("x", 9)
+						    .attr("dy", ".35em")
+						    .attr("transform", "rotate(90)")
+						    .style("text-anchor", "start"); 
+
+					//draw y axis
+					chart_genus.append("g")
+					      .attr("class","yaxis")
+					      .transition() // change the y axis
+				            .duration(750)
+					      	.call(d3.axisLeft(y));
+
+				}); //end of getjson function
+
+	    	} // end of update_graph_genus function
+	    	
+	    } // end of function update graphs
+
+	    function resize_graphs() {
+
+	    	var width = parseInt(d3.select('#chart_genus').style('width')) - margin.left - margin.right;
+
 			height = parseInt(d3.select('#chart_genus').style('height')) - margin.top - margin.bottom;
 
 			// set the ranges
-			x.range([0, width]);			
+			x_genus.range([0, width]);	
+			x_date.range([0, width]);		
 			y.range([height, 0]);
 
-			 svg.attr("width", width + margin.left + margin.right)
-			    .attr("height", height + margin.top + margin.bottom);
+			resize_graph_genus();
+			resize_graph_date();
 
-			 chart.attr("width", width + margin.left + margin.right)
-			    .attr("height", height + margin.top + margin.bottom);
+			function resize_graph_genus() {
 
-			 chart.selectAll(".bar")
-			      .attr("x", function(d) { return x(d.genus); })
-			      .attr("width", x.bandwidth())
-			      .attr("y", function(d) { return y(d.total); })
-			      .attr("height", function(d) { return height - y(d.total); })
+				 svg_genus.attr("width", width + margin.left + margin.right)
+			    	.attr("height", height + margin.top + margin.bottom);
 
-			 chart.select(".xaxis").attr("transform", "translate(0," + height + ")")
-			 				.call(d3.axisBottom(x));
-			 chart.select(".yaxis").call(d3.axisLeft(y));
+				 chart_genus.attr("width", width + margin.left + margin.right)
+				    .attr("height", height + margin.top + margin.bottom);
 
-	    } // end of function resize graph common genus
+				 chart_genus.selectAll(".bar")
+				      .attr("x", function(d) { return x_genus(d.genus); })
+				      .attr("width", x_genus.bandwidth())
+				      .attr("y", function(d) { return y(d.total); })
+				      .attr("height", function(d) { return height - y(d.total); })
 
-	    function initialize_graph_date(nhood) {
+				 chart_genus.select(".xaxis").attr("transform", "translate(0," + height + ")")
+				 				.call(d3.axisBottom(x_genus));
 
-			var width = parseInt(d3.select('#chart_date').style('width')) - margin.left - margin.right,
-			height = parseInt(d3.select('#chart_date').style('height')) - margin.top - margin.bottom;
+				 chart_genus.select(".yaxis").call(d3.axisLeft(y));
 
-			var timeFormat = d3.timeFormat("%Y-%m");
+			} // end of resize graph genus function
 
-			var x = d3.scaleTime()
-			    .range([0, width]);
+			function resize_graph_date() {
 
-			var y = d3.scaleLinear()
-			    .range([height, 0]);
+				 svg_date.attr("width", width + margin.left + margin.right)
+			    	.attr("height", height + margin.top + margin.bottom);
 
-			var line = d3.line()
-			    .x(function(d) { return x(new Date(d.planted_da)); })
-			    .y(function(d) { return y(+d.total); });
+				 chart_date.attr("width", width + margin.left + margin.right)
+				    .attr("height", height + margin.top + margin.bottom);
 
-			var svg = d3.select("#chart_date").append("svg")
-			    .attr("width", width + margin.left + margin.right)
-			    .attr("height", height + margin.top + margin.bottom)
-			  .append("g")
-			    .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+				 chart_date.select(".line")
+				      .attr("d", line);
 
-			$.getJSON( root_api + "trees/date/neighborhood/" + nhood, function(data) {
+				 chart_date.select(".xaxis")
+				 	  .attr("transform", "translate(0," + height + ")")
+				      .call(d3.axisBottom(x_date));
 
-			  x.domain(d3.extent(data, function(d) { return new Date(d.planted_da); }));
-			  y.domain(d3.extent(data, function(d) { return +d.total; }));
+				 chart_date.select(".yaxis")
+				      .call(d3.axisLeft(y));
 
-			  svg.append("g")
-			      .attr("class", "axis axis--x")
-			      .attr("transform", "translate(0," + height + ")")
-			      .call(d3.axisBottom(x))
-			      .selectAll("text")
-					    .attr("y", 0)
-					    .attr("x", 9)
-					    .attr("dy", ".35em")
-					    .attr("transform", "rotate(90)")
-					    .style("text-anchor", "start"); ;
+			} // end of resize graph date function
 
-			  svg.append("g")
-			      .attr("class", "axis axis--y")
-			      .call(d3.axisLeft(y))
-			    .append("text")
-			      .attr("class", "axis-title")
-			      .attr("transform", "rotate(-90)")
-			      .attr("y", 6)
-			      .attr("dy", ".71em")
-			      .style("text-anchor", "end")
-			      .text("Number of trees planted");
+	    } // end of resize graphs function
 
-			  svg.append("path")
-			      .datum(data)
-			      .attr("class", "line")
-			      .attr("d", line);
-			}); //end of getjson function
-
-	    } // end of function initialize graph date
-
-	    function update_graph_date(nhood) {
-
-	    	var x = d3.scaleTime()
-			    .range([0, width]);
-
-	    	 $.getJSON( root_api + "trees/date/neighborhood/" + nhood, function(data) {
-
-				  // Scale the range of the data in the domains
-				  x.domain(d3.extent(data, function(d) { return new Date(d.planted_da); }));
-			  	  y.domain(d3.extent(data, function(d) { return +d.total; }));
-
-			  	  var line = d3.line()
-			    	.x(function(d) { return x(new Date(d.planted_da)); })
-			    	.y(function(d) { return y(+d.total); });
-
-			  	  var svg = d3.select("#chart_date").transition();
-
-				  svg.select(".line")
-				       // change the line
-		            .duration(750)
-		            .attr("d", line(data));
-		        svg.select(".axis--x") // change the x axis
-		            .duration(750)
-		            .call(d3.axisBottom(x));
-		        svg.select(".axis--y") // change the y axis
-		            .duration(750)
-		            .call(d3.axisLeft(y));
-
-			}); //end of getjson function
-
-	    } // end of function update graph date
 
 	    //store previous clicked_marker to color back in green
 	    var previous_marker = L.marker();
