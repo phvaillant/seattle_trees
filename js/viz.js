@@ -53,8 +53,11 @@ var x_genus_modal = d3.scaleBand(),
 	x_date_modal = d3.scaleTime(),
 	y_modal = d3.scaleLinear(),
 	tip_modal = d3.tip(),
+	focus_modal,
 	svg_genus_modal, chart_genus_modal,
-	svg_date_modal, chart_date_modal;
+	svg_date_modal, chart_date_modal,
+	line_modal = d3.line().x(function(d) { return x_date_modal(new Date(d.planted_da)); })
+					    .y(function(d) { return y_modal(+d.total); });
 
 //margin function for the graph
 var margin = {top: 20, right: 20, bottom: 70, left: 40};
@@ -296,11 +299,13 @@ $(document).ready(function() {
 
 		    draw_graph_genus(nhood);
 
+		    initialize_graph_genus_modal();
+
 		    draw_graph_date(nhood);
 
-		    function draw_graph_genus(nhood) {
+		    initialize_graph_date_modal();
 
-		    	draw_graph_genus_modal(nhood);
+		    function draw_graph_genus(nhood) {
 
 		    	svg_genus = d3.select("#chart_genus").append("svg")
 				    .attr("width", width + margin.left + margin.right)
@@ -309,7 +314,6 @@ $(document).ready(function() {
 				svg_genus.on('click', function() {
 					update_graph_genus_modal(nhood);
 					$("#graph_modal").modal();
-					console.log(nhood);
 				});
 
 				chart_genus = svg_genus.append("g")
@@ -384,7 +388,12 @@ $(document).ready(function() {
 
 				svg_date = d3.select("#chart_date").append("svg")
 				    .attr("width", width + margin.left + margin.right)
-				    .attr("height", height + margin.top + margin.bottom)
+				    .attr("height", height + margin.top + margin.bottom);
+
+				svg_date.on('click', function() {
+					update_graph_date_modal(nhood);
+					$("#graph_modal_date").modal();
+				});
 				  
 				chart_date = svg_date.append("g")
 				  	.attr("class","chart")
@@ -462,7 +471,7 @@ $(document).ready(function() {
 
 	    } // end of function initialize_graphs
 
-	    function draw_graph_genus_modal(nhood) {
+	    function initialize_graph_genus_modal() {
 
 			// set the ranges
 			x_genus_modal.range([0, width_modal])
@@ -470,7 +479,7 @@ $(document).ready(function() {
 
 			y_modal.range([height_modal, 0]);
 
-			svg_genus_modal = d3.select(".modal-body").append("svg")
+			svg_genus_modal = d3.select("#graph_modal").select(".modal-body").append("svg")
 				    .attr("width", width_modal + margin.left + margin.right)
 				    .attr("height", height_modal + margin.top + margin.bottom);
 			
@@ -486,54 +495,6 @@ $(document).ready(function() {
 						  });
 
 			svg_genus_modal.call(tip_modal);
-
-			// $.getJSON( root_api + "trees/common/neighborhood/" + nhood, function(data) {
-
-			// 	console.log(data);
-
-			// 		// format the data
-			// 		  data.forEach(function(d) {
-			// 		    d.total = +d.total;
-			// 		  });
-
-			// 		  // Scale the range of the data in the domains
-			// 		  x_genus_modal.domain(data.map(function(d) { return d.genus; }));
-			// 		  y_modal.domain([0, d3.max(data, function(d) { return d.total; })]);
-
-			// 		  // append the rectangles for the bar chart
-			// 		  chart_genus_modal.selectAll(".bar")
-			// 		      .data(data, function(d) { return d.genus; })
-			// 		    .enter().append("rect")
-			// 		      .attr("class", "bar")
-			// 		      .attr("x", function(d) { return x_genus_modal(d.genus); })
-			// 		      .attr("width", x_genus_modal.bandwidth())
-			// 		      .attr("y", function(d) { return y_modal(d.total); })
-			// 		      .attr("height", function(d) { return height_modal - y_modal(d.total); })
-		 //      			  .on('mouseover', function(d,i) {
-		 //      			  	tip_modal.show(d,i);
-		 //      			  })
-		 //      			  .on('mouseout', function(d,i) {
-		 //      			  	tip_modal.hide(d,i);
-		 //      			  });
-
-			// 		  // add the x Axis
-			// 		  chart_genus_modal.append("g")
-			// 		  	  .attr("class","xaxis")
-			// 		      .attr("transform", "translate(0," + height_modal + ")")
-			// 		      .call(d3.axisBottom(x_genus_modal))
-			// 		      .selectAll("text")
-			// 			    .attr("y", 0)
-			// 			    .attr("x", 9)
-			// 			    .attr("dy", ".35em")
-			// 			    .attr("transform", "rotate(90)")
-			// 			    .style("text-anchor", "start");;
-
-			// 		  // add the y Axis
-			// 		  chart_genus_modal.append("g")
-			// 		      .attr("class","yaxis")
-			// 		      .call(d3.axisLeft(y_modal));
-
-			// }); //end of function getjson
 
 	    } // end of function draw_graph_genus_modal
 
@@ -601,6 +562,113 @@ $(document).ready(function() {
 
 	    } // end of update graph modal function
 
+	    function initialize_graph_date_modal() {
+
+	    	// set the ranges
+			x_date_modal.range([0, width_modal]);
+
+	    	svg_date_modal = d3.select("#graph_modal_date").select(".modal-body").append("svg")
+				    .attr("width", width_modal + margin.left + margin.right)
+				    .attr("height", height_modal + margin.top + margin.bottom);
+			
+			chart_date_modal = svg_date_modal.append("g")
+							.attr("class","chart")
+					    	.attr("transform", 
+					          "translate(" + margin.left + "," + margin.top + ")");
+
+			//Tooltips
+			focus_modal = chart_date_modal.append("g")
+				      .attr("class", "focus")
+				      .style("display", "none");
+
+			//Adds circle to focus point on line
+			focus_modal.append("circle")
+				      .attr("r", 4);
+
+			//Adds text to focus point on line    
+			focus_modal.append("text")
+				      .attr("x", 9)
+				      .attr("dy", ".35em");    
+				  
+			//Creates larger area for tooltip   
+			var overlay = chart_date_modal.append("rect")
+				      .attr("class", "overlay")
+				      .attr("width", width_modal)
+				      .attr("height", height_modal)
+				      .on("mouseover", function() { focus_modal.style("display", null); })
+				      .on("mouseout", function() { focus_modal.style("display", "none"); });
+
+			chart_date_modal.append("path")
+				      .attr("class", "line")
+
+			chart_date_modal.append("g")
+				      .attr("class", "xaxis")
+				      .attr("transform", "translate(0," + height_modal + ")")
+				      .call(d3.axisBottom(x_date_modal))
+				      .selectAll("text")
+						    .attr("y", 0)
+						    .attr("x", 9)
+						    .attr("dy", ".35em")
+						    .attr("transform", "rotate(90)")
+						    .style("text-anchor", "start"); ;
+
+			chart_date_modal.append("g")
+				      .attr("class", "yaxis")
+				      .call(d3.axisLeft(y_modal))
+				    .append("text")
+				      .attr("class", "axis-title")
+				      .attr("transform", "rotate(-90)")
+				      .attr("y", 6)
+				      .attr("dy", ".71em")
+				      .style("text-anchor", "end")
+				      .text("Number of trees planted");
+
+	    } // end of initialize graph date modal function
+
+	    function update_graph_date_modal(nhood) {
+
+	    	$.getJSON( root_api + "trees/date/neighborhood/" + nhood, function(data) {
+
+					  // Scale the range of the data in the domains
+					  x_date_modal.domain(d3.extent(data, function(d) { return new Date(d.planted_da); }));
+				  	  y_modal.domain(d3.extent(data, function(d) { return +d.total; }));
+
+				  	  svg = svg_date_modal.select(".line").datum(data);
+					  svg.transition()
+					  		.duration(750).attr("d", line_modal);
+
+			          svg_date_modal.transition().select(".xaxis") // change the x axis
+			            .duration(750)
+			            .call(d3.axisBottom(x_date_modal))
+			            .selectAll("text")
+						    .attr("y", 0)
+						    .attr("x", 9)
+						    .attr("dy", ".35em")
+						    .attr("transform", "rotate(90)")
+						    .style("text-anchor", "start"); ;
+
+			          svg_date_modal.transition().select(".yaxis") // change the y axis
+			            .duration(750)
+			            .call(d3.axisLeft(y_modal));
+
+			          chart_date_modal.select(".overlay")
+			          			.on("mousemove",mousemove);
+
+			          //Tooltip mouseovers            
+					  function mousemove() {
+					    var x0 = x_date_modal.invert(d3.mouse(this)[0]),
+					        i = bisectDate(data, x0, 1),
+					        d0 = data[i - 1],
+					        d1 = data[i],
+					        d = x0 - d0.planted_da > d1.planted_da - x0 ? d1 : d0;
+					    focus_modal.attr("transform", "translate(" + x_date_modal(d.planted_da) + "," + y_modal(d.total) + ")");
+					    focus_modal.select("text").text(d.total);
+					  }; 
+
+				}); //end of getjson function
+
+	    } // end of update graph date modal function
+
 
 
 	    function update_graphs(nhood) {
@@ -610,6 +678,11 @@ $(document).ready(function() {
 	    	update_graph_date(nhood);
 
 	    	function update_graph_date(nhood) {
+
+	    		svg_date.on('click', function() {
+					$("#graph_modal_date").modal();
+					update_graph_date_modal(nhood);
+				});
 
 		    	 $.getJSON( root_api + "trees/date/neighborhood/" + nhood, function(data) {
 
@@ -659,7 +732,6 @@ $(document).ready(function() {
 	    		svg_genus.on('click', function() {
 					$("#graph_modal").modal();
 					update_graph_genus_modal(nhood);
-					console.log(nhood);
 				});
 
 	    		$.getJSON( root_api + "trees/common/neighborhood/" + nhood, function(data) {
@@ -741,6 +813,10 @@ $(document).ready(function() {
 
 	    function resize_graphs() {
 
+	    	width_modal = 0.9*window.innerWidth - margin.left - margin.right;
+
+	    	height_modal = 0.9*window.innerHeight - margin.top - margin.bottom - 45;
+
 	    	var width = parseInt(d3.select('#chart_genus').style('width')) - margin.left - margin.right;
 
 			height = parseInt(d3.select('#chart_genus').style('height')) - margin.top - margin.bottom;
@@ -750,8 +826,15 @@ $(document).ready(function() {
 			x_date.range([0, width]);		
 			y.range([height, 0]);
 
+			x_genus_modal.range([0, width_modal]);	
+			x_date_modal.range([0, width_modal]);		
+			y_modal.range([height_modal, 0]);
+
 			resize_graph_genus();
 			resize_graph_date();
+
+			resize_graph_genus_modal();
+			resize_graph_date_modal();
 
 			function resize_graph_genus() {
 
@@ -774,6 +857,27 @@ $(document).ready(function() {
 
 			} // end of resize graph genus function
 
+			function resize_graph_genus_modal() {
+
+				 svg_genus_modal.attr("width", width_modal + margin.left + margin.right)
+			    	.attr("height", height_modal + margin.top + margin.bottom);
+
+				 chart_genus_modal.attr("width", width_modal + margin.left + margin.right)
+				    .attr("height", height + margin.top + margin.bottom);
+
+				 chart_genus_modal.selectAll(".bar")
+				      .attr("x", function(d) { return x_genus_modal(d.genus); })
+				      .attr("width", x_genus_modal.bandwidth())
+				      .attr("y", function(d) { return y_modal(d.total); })
+				      .attr("height", function(d) { return height_modal - y_modal(d.total); })
+
+				 chart_genus_modal.select(".xaxis").attr("transform", "translate(0," + height_modal + ")")
+				 				.call(d3.axisBottom(x_genus_modal));
+
+				 chart_genus_modal.select(".yaxis").call(d3.axisLeft(y_modal));
+
+			} // end of resize graph genus function
+
 			function resize_graph_date() {
 
 				 svg_date.attr("width", width + margin.left + margin.right)
@@ -791,6 +895,26 @@ $(document).ready(function() {
 
 				 chart_date.select(".yaxis")
 				      .call(d3.axisLeft(y));
+
+			} // end of resize graph date function
+
+			function resize_graph_date_modal() {
+
+				 svg_date_modal.attr("width", width_modal + margin.left + margin.right)
+			    	.attr("height", height_modal + margin.top + margin.bottom);
+
+				 chart_date_modal.attr("width", width_modal + margin.left + margin.right)
+				    .attr("height", height_modal + margin.top + margin.bottom);
+
+				 chart_date_modal.select(".line")
+				      .attr("d", line_modal);
+
+				 chart_date_modal.select(".xaxis")
+				 	  .attr("transform", "translate(0," + height_modal + ")")
+				      .call(d3.axisBottom(x_date_modal));
+
+				 chart_date_modal.select(".yaxis")
+				      .call(d3.axisLeft(y_modal));
 
 			} // end of resize graph date function
 
