@@ -43,8 +43,12 @@ html, body, .container{
 }
 
 .toggle-sidebar {
-	z-index: 9999;
+	z-index: 2;
 	position: relative;
+}
+
+#graph_modal {
+  z-index: 9999;
 }
 
 #filters-container {
@@ -106,6 +110,10 @@ html, body, .container{
   left: 0;
 }
 
+.modal-tip {
+  z-index: 10000;
+}
+
 /*style for line chart tooltip
 */
 .overlay {
@@ -119,6 +127,43 @@ html, body, .container{
 
 .focus circle {
     fill: #5e8dc9;
+}
+
+/*styling for modal
+*/
+
+/*.modal-dialog {
+  height: 90%;
+  padding-top: 5%;
+  margin-top : 0px;
+  margin-bottom: 0px;
+  width: 90%;
+  margin-left: 5%;
+}
+*/
+
+.modal-dialog {
+  top:5%;
+  height: 90%;
+  left:5%;
+  width: 90%;
+  margin: 0;
+}
+
+.modal-content {
+  height: 100%;
+  padding-top: 45px;
+}
+
+.modal-header {
+  padding: 5px;
+  margin-top: -45px;
+  height: 45px;
+}
+
+.modal-body {
+  height: 100%;
+  padding: 0px;
 }
 
 
