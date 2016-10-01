@@ -6,6 +6,8 @@ var map;
 
 //array to store layers for each genus
 var mapLayerGroups = [];
+var mapClusterGroups = [];
+var mcgLayerSupportGroup = L.markerClusterGroup.layerSupport({ chunkedLoading: true});
 
 //define map center
 var mapCenter = {lat: 47.654967,lng:-122.312668};
@@ -29,7 +31,7 @@ var neighborhoods = {};
 //define tile
 var your_tile = L.tileLayer('http://stamen-tiles-{s}.a.ssl.fastly.net/watercolor/{z}/{x}/{y}.{ext}', {
 	attribution: 'Map tiles by <a href="http://stamen.com">Stamen Design</a>, <a href="http://creativecommons.org/licenses/by/3.0">CC BY 3.0</a> &mdash; Map data &copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-	,ext: 'png', minZoom:15, maxZoom:20});
+	,ext: 'png', minZoom:12, maxZoom:20});
 
 //format for date - used later in date grpah
 var timeFormat = d3.timeFormat("%Y-%m");
@@ -72,7 +74,7 @@ $(document).ready(function() {
 		//set your map and some options of the view
 		map = L.map('map-canvas', {
 			zoomControl: false
-		}).setView([mapCenter.lat,mapCenter.lng], 15);
+		}).setView([mapCenter.lat,mapCenter.lng], 12);
 
 		//add zoom control with your options
 		L.control.zoom({
@@ -90,6 +92,7 @@ $(document).ready(function() {
 
     	$('#neighborhoods').multiselect({
     		onChange: function(option, select) {
+
     			var current_nhood = option.val();
 
     			if (previous_nhood == -1) {
@@ -97,7 +100,8 @@ $(document).ready(function() {
     				limits = neighborhoods[current_nhood].getBounds();
 	    			map.fitBounds(limits);
 	    			clearallLayers();
-	    			initialize_trees();
+	    			//initialize_trees();
+	    			initialize_cluster_trees();
 	    			//show the layer of the neighborhood selected
 	    			neighborhoods[current_nhood].addTo(map);
     			}
@@ -116,7 +120,8 @@ $(document).ready(function() {
     					limits = neighborhoods[current_nhood].getBounds();
 		    			map.fitBounds(limits);
 		    			clearallLayers();
-		    			initialize_trees();
+		    			initialize_cluster_trees();
+		    			//initialize_trees();
 		    			neighborhoods[current_nhood].addTo(map);
 		    			update_graphs(current_nhood);
     				}
@@ -249,7 +254,8 @@ $(document).ready(function() {
         initialize_filters();
 
         //initialize the markers
-        initialize_trees();
+        //initialize_trees();
+        initialize_cluster_trees();
 
         //initialize the neighborhoods filter
         initialize_neighborhoods();
@@ -261,13 +267,15 @@ $(document).ready(function() {
 
 		// //draw the new markers when you stop dragging the map
 		map.on('dragend', function onDragEnd(){
-			initialize_trees();
+			//initialize_trees();
+			initialize_cluster_trees();
 	    });
 
 	    function initialize_neighborhoods() {
 	    	// load GeoJSON from an external file
 		    $.getJSON("js/seattle_neighborhoods.geojson",function(data){
-		    	$.each( data, function( key, val ) {
+		    	
+		    	$.each( data.features, function( key, val ) {
 		    		nhood = val.properties.nhood;
 		    		name = val.properties.name;
 		    		if (nhood == name) {
@@ -1002,6 +1010,90 @@ $(document).ready(function() {
 
         } // end of initiqlize function
 
+        function initialize_cluster_trees() {
+
+        	$.getJSON( root_api + "trees/" + map.getBounds().getSouth() + "/" + map.getBounds().getNorth() + "/" + map.getBounds().getWest() + "/" + map.getBounds().getEast(), function( data ) {
+
+        			mcgLayerSupportGroup.addTo(map); 
+
+        		//create a variable to count the total number of trees displayed in the window
+					var total_trees = 0;
+
+					var marker_array = [];
+					
+					//Jquery method that allows you to iterate over an array: http://api.jquery.com/jquery.each/
+					$.each(data, function(k,v){
+
+						//does layerGroup already exist? if not create it and add to map
+					    //var cluster = mapClusterGroups[v.genus];
+					    var layer = mapLayerGroups[v.genus];
+
+					    if (layer === undefined) {
+					        layer = new L.layerGroup();
+					        //add the layer to the map
+					        mcgLayerSupportGroup.checkIn(layer);
+					        layer.addTo(map);
+					        //store layer
+					        mapLayerGroups[v.genus] = layer;
+					    } // end of if condition
+
+					    //Create markers with the customized icon.
+					    var marker = L.marker([v.point_y, v.point_x],{icon: treeicon});
+
+						marker.bindPopup(v.new_common_nam);
+						marker.on('mouseover', function (e) {
+				            this.openPopup();
+				        });
+				        marker.on('mouseout', function (e) {
+				            this.closePopup();
+				        });
+
+				        marker.on('click', function() {
+				        	$.getJSON( root_api + "trees/description/" + v.compkey, function(data) {
+				        		tree_info = data[0];
+				        		previous_marker.setIcon(treeicon);
+				        		previous_marker = marker;
+				        		marker.setIcon(treeicon_red);
+				        		var planted_da;
+				        		var last_verif;
+				        		if (tree_info.planted_da) {
+				        			planted_da = tree_info.planted_da.substr(0,10)
+				        		}
+				        		else {
+				        			planted_da = "Unknown"
+				        		}
+				        		if (tree_info.last_verif) {
+				        			last_verif = tree_info.last_verif.substr(0,10)
+				        		}
+				        		else {
+				        			last_verif = "Unknown"
+				        		}
+				        		$("#detail_tree").html("<li class='list-group-item'><b>Tree id:</b> " + tree_info.unitid + "</li><li class='list-group-item'><b>Species (Scientific):</b> " + tree_info.new_scientific + "</li><li class='list-group-item'><b>Species (Common):</b> " + tree_info.new_common_nam + "</li><li class='list-group-item'><b>Genus:</b> "+ tree_info.genus + "</li><li class='list-group-item'><b>Family (Scientific):</b> " + tree_info.family + "</li><li class='list-group-item'><b>Family (Common):</b> " + tree_info.family_common + "</li><li class='list-group-item'><b>Order:</b> " + tree_info.order_plant + "</li><li class='list-group-item'><b>Plantation Date:</b> " + planted_da + "</li><li class='list-group-item'><b>Tree Diameter:</b> " + tree_info.diam + "</li><li class='list-group-item'><b>Address:</b> " + tree_info.unitdesc +"</li><li class='list-group-item'><b>Tree Height:</b> " + tree_info.treeheight + "</li><li class='list-group-item'><b>Ownership:</b> " + tree_info.ownership + "</li><li class='list-group-item'><b>Last time it has been verified:</b> " + last_verif + '</li>'); 
+				        	}); // end of getjson function
+				        	if ($(".sidebar").hasClass('collapsed')) {
+				        		collapse_sidebar();
+				        	};
+				        	//show tree tab
+				        	$("#top-sidebar li").removeClass("active");
+				        	$(".tab-content div").removeClass("active");
+				        	$("#tree_top_sidebar").addClass("active");
+				        	$("#home").addClass("in active");
+				        }); // end of marker on click function
+
+					    //add the feature to the layer
+					    //layer.addLayer(featureLayer); 
+					    //marker_array[v.genus].push(marker);
+					    marker.addTo(layer);
+
+						//count the number of trees
+						total_trees += 1;
+
+					}); // end of the each function	
+
+			}); // end of the getjson function
+
+        } // end of initiqlize function
+
 		        /*
 		* show/hide layerGroup   
 		*/
@@ -1058,7 +1150,9 @@ $(document).ready(function() {
 			    		orders.push(val.order_plant);
 			    	}
 
+					// $('#genus-filter').append('<option value="' + val.genus + '" family="' + val.family_common + '" order="' + val.order_plant + '">'+ val.genus +'</option>');
 					$('#genus-filter').append('<option value="' + val.genus + '" family="' + val.family_common + '" order="' + val.order_plant + '">'+ val.genus +'</option>');
+					
 					$("#genus-filter").multiselect('selectAll', false);
 	        		$("#genus-filter").multiselect('updateButtonText');
 					$('#genus-filter').multiselect('rebuild');
@@ -1092,6 +1186,6 @@ $(document).ready(function() {
 
 			}); //end of getjson function
 
-        } //end of initialize_filters function
+	    } //end of initialize_filters function
 
 }); // end of document ready function
