@@ -4,11 +4,6 @@ var root_api = 'http://ec2-54-234-216-12.compute-1.amazonaws.com:5432/'
 //define map variable
 var map;
 
-//array to store layers for each genus
-var mapLayerGroups = [];
-var mapClusterGroups = [];
-var mcgLayerSupportGroup = L.markerClusterGroup.layerSupport({ chunkedLoading: true});
-
 //define map center
 var mapCenter = {lat: 47.654967,lng:-122.312668};
 
@@ -74,7 +69,41 @@ $(document).ready(function() {
 		//set your map and some options of the view
 		map = L.map('map-canvas', {
 			zoomControl: false
-		}).setView([mapCenter.lat,mapCenter.lng], 12);
+		}).setView([mapCenter.lat,mapCenter.lng], 15);
+
+		// map.locate({
+		//       setView: true,
+		//       enableHighAccuracy: true
+		//     })
+		// 	.on('locationfound', function(e) {
+		// 		map.setView(e.latlng, 15);
+		// 		initialize_cluster_trees();
+		//     });
+
+		//array to store layers for each genus
+		var mapLayerGroups = [];
+		var mapClusterGroups = [];
+		//make the maxclusterradius option depends on zoom level.
+		var mcgLayerSupportGroup = L.markerClusterGroup.layerSupport({ chunkedLoading: true, maxClusterRadius: 50,
+			chunkProgress: updateProgressBar});
+
+		var progress = document.getElementById('progress');
+		var progressBar = document.getElementById('progress-bar');
+		
+		function updateProgressBar(processed, total, elapsed, layersArray) {
+			console.log(processed);
+			console.log(elapsed);
+			if (elapsed > 1000) {
+				// if it takes more than a second to load, display the progress bar:
+				progress.style.display = 'block';
+				progressBar.style.width = Math.round(processed/total*100) + '%';
+			}
+			if (processed === total) {
+				// all markers processed - hide the progress bar:
+				progress.style.display = 'none';
+			}
+		}
+
 
 		//add zoom control with your options
 		L.control.zoom({
@@ -985,6 +1014,8 @@ $(document).ready(function() {
 				        		else {
 				        			last_verif = "Unknown"
 				        		}
+				        		// $("#tree_intro").html("glou");
+				        		// console.log($("#tree_intro"));
 				        		$("#detail_tree").html("<li class='list-group-item'><b>Tree id:</b> " + tree_info.unitid + "</li><li class='list-group-item'><b>Species (Scientific):</b> " + tree_info.new_scientific + "</li><li class='list-group-item'><b>Species (Common):</b> " + tree_info.new_common_nam + "</li><li class='list-group-item'><b>Genus:</b> "+ tree_info.genus + "</li><li class='list-group-item'><b>Family (Scientific):</b> " + tree_info.family + "</li><li class='list-group-item'><b>Family (Common):</b> " + tree_info.family_common + "</li><li class='list-group-item'><b>Order:</b> " + tree_info.order_plant + "</li><li class='list-group-item'><b>Plantation Date:</b> " + planted_da + "</li><li class='list-group-item'><b>Tree Diameter:</b> " + tree_info.diam + "</li><li class='list-group-item'><b>Address:</b> " + tree_info.unitdesc +"</li><li class='list-group-item'><b>Tree Height:</b> " + tree_info.treeheight + "</li><li class='list-group-item'><b>Ownership:</b> " + tree_info.ownership + "</li><li class='list-group-item'><b>Last time it has been verified:</b> " + last_verif + '</li>'); 
 				        	}); // end of getjson function
 				        	if ($(".sidebar").hasClass('collapsed')) {
@@ -1014,7 +1045,7 @@ $(document).ready(function() {
 
         	$.getJSON( root_api + "trees/" + map.getBounds().getSouth() + "/" + map.getBounds().getNorth() + "/" + map.getBounds().getWest() + "/" + map.getBounds().getEast(), function( data ) {
 
-        			mcgLayerSupportGroup.addTo(map); 
+        			//mcgLayerSupportGroup.addTo(map); 
 
         		//create a variable to count the total number of trees displayed in the window
 					var total_trees = 0;
@@ -1068,6 +1099,8 @@ $(document).ready(function() {
 				        		else {
 				        			last_verif = "Unknown"
 				        		}
+				        		$("#tree_intro").html("");
+				        		console.log($("#tree_intro"));
 				        		$("#detail_tree").html("<li class='list-group-item'><b>Tree id:</b> " + tree_info.unitid + "</li><li class='list-group-item'><b>Species (Scientific):</b> " + tree_info.new_scientific + "</li><li class='list-group-item'><b>Species (Common):</b> " + tree_info.new_common_nam + "</li><li class='list-group-item'><b>Genus:</b> "+ tree_info.genus + "</li><li class='list-group-item'><b>Family (Scientific):</b> " + tree_info.family + "</li><li class='list-group-item'><b>Family (Common):</b> " + tree_info.family_common + "</li><li class='list-group-item'><b>Order:</b> " + tree_info.order_plant + "</li><li class='list-group-item'><b>Plantation Date:</b> " + planted_da + "</li><li class='list-group-item'><b>Tree Diameter:</b> " + tree_info.diam + "</li><li class='list-group-item'><b>Address:</b> " + tree_info.unitdesc +"</li><li class='list-group-item'><b>Tree Height:</b> " + tree_info.treeheight + "</li><li class='list-group-item'><b>Ownership:</b> " + tree_info.ownership + "</li><li class='list-group-item'><b>Last time it has been verified:</b> " + last_verif + '</li>'); 
 				        	}); // end of getjson function
 				        	if ($(".sidebar").hasClass('collapsed')) {
@@ -1091,6 +1124,9 @@ $(document).ready(function() {
 					}); // end of the each function	
 
 			}); // end of the getjson function
+
+			console.log(mcgLayerSupportGroup);
+			mcgLayerSupportGroup.addTo(map); 
 
         } // end of initiqlize function
 
