@@ -24,7 +24,10 @@ var treeicon_red = L.icon({
 var neighborhoods = {};
 
 //define tile
-var your_tile = L.tileLayer('http://stamen-tiles-{s}.a.ssl.fastly.net/watercolor/{z}/{x}/{y}.{ext}', {
+//var your_tile = L.tileLayer('http://stamen-tiles-{s}.a.ssl.fastly.net/watercolor/{z}/{x}/{y}.{ext}', {
+//	attribution: 'Map tiles by <a href="http://stamen.com">Stamen Design</a>, <a href="http://creativecommons.org/licenses/by/3.0">CC BY 3.0</a> &mdash; Map data &copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+//	,ext: 'png', minZoom:12, maxZoom:20});
+var your_tile = L.tileLayer('http://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
 	attribution: 'Map tiles by <a href="http://stamen.com">Stamen Design</a>, <a href="http://creativecommons.org/licenses/by/3.0">CC BY 3.0</a> &mdash; Map data &copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>'
 	,ext: 'png', minZoom:12, maxZoom:20});
 
@@ -68,7 +71,7 @@ $(document).ready(function() {
 
 		//set your map and some options of the view
 		map = L.map('map-canvas', {
-			zoomControl: false
+			zoomControl: false, maxZoom: 20
 		}).setView([mapCenter.lat,mapCenter.lng], 15);
 
 		// map.locate({
@@ -84,23 +87,35 @@ $(document).ready(function() {
 		var mapLayerGroups = [];
 		var mapClusterGroups = [];
 		//make the maxclusterradius option depends on zoom level.
-		var mcgLayerSupportGroup = L.markerClusterGroup.layerSupport({ chunkedLoading: true, maxClusterRadius: 50,
-			chunkProgress: updateProgressBar});
 
 		var progress = document.getElementById('progress');
 		var progressBar = document.getElementById('progress-bar');
+
+		var clusterParentGroup = L.markerClusterGroup({ chunkedLoading: true,
+			chunkProgress: updateProgressBar});
+		clusterParentGroup.addTo(map);
 		
+		//var tot_elapsed=0;
+		var tot_processed=0;
+		var total_trees;
+		//var tot_total = 0;
+
 		function updateProgressBar(processed, total, elapsed, layersArray) {
-			console.log(processed);
-			console.log(elapsed);
-			if (elapsed > 1000) {
+			//tot_elapsed += elapsed;
+			tot_processed += processed;
+			//tot_total += total;
+			//if (elapsed > 1000) {
+			if (total_trees - tot_processed > 1000) {
 				// if it takes more than a second to load, display the progress bar:
 				progress.style.display = 'block';
-				progressBar.style.width = Math.round(processed/total*100) + '%';
+				progressBar.style.width = Math.round(tot_processed/total_trees*100) + '%';
+				//progressBar.style.width = Math.round(processed/total*100) + '%';
 			}
-			if (processed === total) {
-				// all markers processed - hide the progress bar:
-				progress.style.display = 'none';
+			else {
+				if (processed === total) {
+					// all markers processed - hide the progress bar:
+					progress.style.display = 'none';
+				}
 			}
 		}
 
@@ -1048,24 +1063,33 @@ $(document).ready(function() {
         			//mcgLayerSupportGroup.addTo(map); 
 
         		//create a variable to count the total number of trees displayed in the window
-					var total_trees = 0;
+					//var total_trees = 0;
+					total_trees = 0;
 
-					var marker_array = [];
+					var marker_array = {};
 					
 					//Jquery method that allows you to iterate over an array: http://api.jquery.com/jquery.each/
 					$.each(data, function(k,v){
 
 						//does layerGroup already exist? if not create it and add to map
 					    //var cluster = mapClusterGroups[v.genus];
-					    var layer = mapLayerGroups[v.genus];
+					    //var layer = mapLayerGroups[v.genus];
+					    //var check = marker_array[v.genus];
 
-					    if (layer === undefined) {
-					        layer = new L.layerGroup();
+					    //console.log(marker_array);
+
+					    //if (layer === undefined) {
+					    if (marker_array[v.genus] === undefined) {
+					    //if (marker_array.hasOwnProperty(v.genus)) {
+					    	//layer = new L.featureGroup.subGroup(clusterParentGroup);
+					        //layer = new L.layerGroup();
 					        //add the layer to the map
-					        mcgLayerSupportGroup.checkIn(layer);
-					        layer.addTo(map);
+					        //mcgLayerSupportGroup.checkIn(layer);
+					        //layer.addTo(map);
 					        //store layer
-					        mapLayerGroups[v.genus] = layer;
+					        marker_array[v.genus] = [];
+					        //mapLayerGroups[v.genus] = [];
+					        //mapLayerGroups[v.genus] = layer;
 					    } // end of if condition
 
 					    //Create markers with the customized icon.
@@ -1100,7 +1124,6 @@ $(document).ready(function() {
 				        			last_verif = "Unknown"
 				        		}
 				        		$("#tree_intro").html("");
-				        		console.log($("#tree_intro"));
 				        		$("#detail_tree").html("<li class='list-group-item'><b>Tree id:</b> " + tree_info.unitid + "</li><li class='list-group-item'><b>Species (Scientific):</b> " + tree_info.new_scientific + "</li><li class='list-group-item'><b>Species (Common):</b> " + tree_info.new_common_nam + "</li><li class='list-group-item'><b>Genus:</b> "+ tree_info.genus + "</li><li class='list-group-item'><b>Family (Scientific):</b> " + tree_info.family + "</li><li class='list-group-item'><b>Family (Common):</b> " + tree_info.family_common + "</li><li class='list-group-item'><b>Order:</b> " + tree_info.order_plant + "</li><li class='list-group-item'><b>Plantation Date:</b> " + planted_da + "</li><li class='list-group-item'><b>Tree Diameter:</b> " + tree_info.diam + "</li><li class='list-group-item'><b>Address:</b> " + tree_info.unitdesc +"</li><li class='list-group-item'><b>Tree Height:</b> " + tree_info.treeheight + "</li><li class='list-group-item'><b>Ownership:</b> " + tree_info.ownership + "</li><li class='list-group-item'><b>Last time it has been verified:</b> " + last_verif + '</li>'); 
 				        	}); // end of getjson function
 				        	if ($(".sidebar").hasClass('collapsed')) {
@@ -1116,17 +1139,24 @@ $(document).ready(function() {
 					    //add the feature to the layer
 					    //layer.addLayer(featureLayer); 
 					    //marker_array[v.genus].push(marker);
-					    marker.addTo(layer);
+					    //marker.addTo(layer);
+					    marker_array[v.genus].push(marker);
 
 						//count the number of trees
 						total_trees += 1;
 
 					}); // end of the each function	
 
+					$.each(marker_array, function(k,v){
+						var layer = new L.featureGroup.subGroup(clusterParentGroup, v);
+						mapLayerGroups[k] = layer;
+						layer.addTo(map);
+					})
+
 			}); // end of the getjson function
 
-			console.log(mcgLayerSupportGroup);
-			mcgLayerSupportGroup.addTo(map); 
+			//console.log(mcgLayerSupportGroup);
+			//mcgLayerSupportGroup.addTo(map); 
 
         } // end of initiqlize function
 
