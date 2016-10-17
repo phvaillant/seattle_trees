@@ -60,7 +60,6 @@ $(document).ready(function() {
 	//featureLayer.loadID('debricassart.1m5e0loa');
 
 	var featureLayer = L.mapbox.featureLayer('js/seattle_neighborhoods.geojson');
-	console.log(featureLayer);
 
 	//get the lookup_family and lookup_order for switching between layers
 	var lookup_family = {},
@@ -85,6 +84,8 @@ $(document).ready(function() {
 
 
 	//initialize clusters
+	var markers;
+	var pruneCluster = new PruneClusterForLeaflet();
 	initialize_clusters();
 
 	var t4 = performance.now();
@@ -99,18 +100,23 @@ $(document).ready(function() {
 		var new_zoom = map.getZoom();
 		if (new_zoom > 16) {
 			remove_all_markers();
+			//console.log("coucou");
+			showallLayer();
 			initialize_trees();
 		}
 		else {
 			if (new_zoom < zoom) {
-			redraw_clusters();
+				hideallLayer();
+				redraw_clusters();
 			}
 		}
 		zoom = new_zoom;
 	   });
 
 	//resize svg on resize / use of leaflet map event because conflict with d3 and jquery resize event
-	map.on('resize', redraw_clusters);
+	map.on('resize', function() {
+		(zoom > 16) ? initialize_trees() : redraw_clusters();
+	})
 
 	//click event of neighborhoods
 	var previous_nhood;
@@ -221,37 +227,38 @@ $(document).ready(function() {
 			}); //end of getjson function
 
 	    } //end of initialize_filters function
-
-	    var markers;
-	    var pruneCluster;
 	 
 	    function initialize_clusters() {
-	    	pruneCluster = new PruneClusterForLeaflet();
+	    	//pruneCluster = new PruneClusterForLeaflet();
+	    	pruneCluster.RemoveMarkers();
 	    	markers = [];
 	    	$.getJSON( root_api + "trees/" + map.getBounds().getSouth() + "/" + map.getBounds().getNorth() + "/" + map.getBounds().getWest() + "/" + map.getBounds().getEast(), function( data ) {
 
-	    		pruneCluster.PrepareLeafletMarker = function(leafletMarker, data) {
-				    leafletMarker.setIcon(treeicon); // See http://leafletjs.com/reference.html#icon
-				    //listeners can be applied to markers in this function
-				    leafletMarker.on('click', function(){
-				    	show_info_marker(leafletMarker,data);
-				    });
-				    leafletMarker.bindPopup(data.genus);
-				    leafletMarker.on('mouseover', function (e) {
-				            this.openPopup();
-					});
-					leafletMarker.on('mouseout', function (e) {
-						    this.closePopup();
-					});
-				}; //end of prepareleafletmarker function
+	   //  		pruneCluster.PrepareLeafletMarker = function(leafletMarker, data) {
+				//     leafletMarker.setIcon(treeicon); // See http://leafletjs.com/reference.html#icon
+				//     //listeners can be applied to markers in this function
+				//     leafletMarker.on('click', function(){
+				//     	show_info_marker(leafletMarker,data);
+				//     });
+				//     leafletMarker.bindPopup(data.genus);
+				//     leafletMarker.on('mouseover', function (e) {
+				//             this.openPopup();
+				// 	});
+				// 	leafletMarker.on('mouseout', function (e) {
+				// 		    this.closePopup();
+				// 	});
+				// }; //end of prepareleafletmarker function
 
 				//Jquery method that allows you to iterate over an array: http://api.jquery.com/jquery.each/
 				$.each(data, function(k,v){
 
 					var marker = new PruneCluster.Marker(v.point_y, v.point_x);
+					marker.data.icon = treeicon;
 					marker.data.genus = v.genus;
 					marker.data.compkey = v.compkey;
 					marker.data.popup = v.genus;
+					//icon redrawing with a flag
+					//marker.data.forceIconRedraw = true;
 					marker.filtered = false;
 					pruneCluster.RegisterMarker(marker);
 					markers.push(marker);
@@ -272,13 +279,14 @@ $(document).ready(function() {
 
 	    //array to store layers for each genus
 	    var mapLayerGroups = [];
+	    //store previous clicked_marker to color back in green
+	    var previous_marker = new L.marker();
 	    function initialize_trees() {
 
         	$.getJSON( root_api + "trees/" + map.getBounds().getSouth() + "/" + map.getBounds().getNorth() + "/" + map.getBounds().getWest() + "/" + map.getBounds().getEast(), function( data ) {
 
-
         		//create a variable to count the total number of trees displayed in the window
-					var total_trees = 0;
+					//var total_trees = 0;
 					
 					//Jquery method that allows you to iterate over an array: http://api.jquery.com/jquery.each/
 					$.each(data, function(k,v){
@@ -326,7 +334,8 @@ $(document).ready(function() {
 				        			last_verif = "Unknown"
 				        		}
 				        		var detail_tree = document.getElementById("detail_tree");
-				        		detail_tree.innerHTML = "<li class='list-group-item'><b>Tree id:</b> " + tree_info.unitid + "</li><li class='list-group-item'><b>Species (Scientific):</b> " + tree_info.new_scientific + "</li><li class='list-group-item'><b>Species (Common):</b> " + tree_info.new_common_nam + "</li><li class='list-group-item'><b>Genus:</b> "+ tree_info.genus + "</li><li class='list-group-item'><b>Family (Scientific):</b> " + tree_info.family + "</li><li class='list-group-item'><b>Family (Common):</b> " + tree_info.family_common + "</li><li class='list-group-item'><b>Order:</b> " + tree_info.order_plant + "</li><li class='list-group-item'><b>Plantation Date:</b> " + planted_da + "</li><li class='list-group-item'><b>Tree Diameter:</b> " + tree_info.diam + "</li><li class='list-group-item'><b>Address:</b> " + tree_info.unitdesc +"</li><li class='list-group-item'><b>Tree Height:</b> " + tree_info.treeheight + "</li><li class='list-group-item'><b>Ownership:</b> " + tree_info.ownership + "</li><li class='list-group-item'><b>Last time it has been verified:</b> " + last_verif + '</li>'; 
+				        		console.log(tree_info,tree_info.wikipedia_url);
+				        		detail_tree.innerHTML = "<ul class='list-group'><li class='list-group-item'><b>Tree id:</b> " + tree_info.unitid + "</li><li class='list-group-item'><b>Species (Scientific):</b> " + tree_info.new_scientific + "</li><li class='list-group-item'><b>Species (Common):</b> " + tree_info.new_common_nam + "</li><li class='list-group-item'><b>Genus:</b> "+ tree_info.genus + "</li><li class='list-group-item'><b>Family (Scientific):</b> " + tree_info.family + "</li><li class='list-group-item'><b>Family (Common):</b> " + tree_info.family_common + "</li><li class='list-group-item'><b>Order:</b> " + tree_info.order_plant + "</li><li class='list-group-item'><b>Plantation Date:</b> " + planted_da + "</li><li class='list-group-item'><b>Tree Diameter:</b> " + tree_info.diam + "</li><li class='list-group-item'><b>Address:</b> " + tree_info.unitdesc +"</li><li class='list-group-item'><b>Tree Height:</b> " + tree_info.treeheight + "</li><li class='list-group-item'><b>Ownership:</b> " + tree_info.ownership + "</li><li class='list-group-item'><b>Last time it has been verified:</b> " + last_verif + "</li><li class='list-group-item'><b>Website for more information:</b> " + tree_info.wikipedia_url + '</li></ul>'; 
 				        	}); // end of getjson function
 				        	if ($(".sidebar").hasClass('collapsed')) {
 				        		collapse_sidebar();
@@ -343,7 +352,7 @@ $(document).ready(function() {
 					    marker.addTo(layer);
 
 						//count the number of trees
-						total_trees += 1;
+						//total_trees += 1;
 
 					}); // end of the each function
 
@@ -470,43 +479,6 @@ $(document).ready(function() {
 	        });
 
 	    } //end of function set multiselect options
-
-	    //store previous clicked_marker to color back in green
-	    var previous_marker = new L.marker();
-	    function show_info_marker(marker, data) {
-	    	$.getJSON( root_api + "trees/description/" + data.compkey, function(data) {
-				        var tree_info = data[0];
-				        previous_marker.setIcon(treeicon);
-				        previous_marker = marker;
-				        marker.setIcon(treeicon_red);
-				        var planted_da;
-				        var last_verif;
-				        if (tree_info.planted_da) {
-				        	planted_da = tree_info.planted_da.substr(0,10)
-				        }
-				        else {
-				        	planted_da = "Unknown"
-				        }
-				        if (tree_info.last_verif) {
-				        	last_verif = tree_info.last_verif.substr(0,10)
-				        }
-				        else {
-				        	last_verif = "Unknown"
-				        }
-				        		// $("#tree_intro").html("glou");
-				        		// console.log($("#tree_intro"));
-				        var detail_tree = document.getElementById("detail_tree");
-				        detail_tree.innerHTML = "<li class='list-group-item'><b>Tree id:</b> " + tree_info.unitid + "</li><li class='list-group-item'><b>Species (Scientific):</b> " + tree_info.new_scientific + "</li><li class='list-group-item'><b>Species (Common):</b> " + tree_info.new_common_nam + "</li><li class='list-group-item'><b>Genus:</b> "+ tree_info.genus + "</li><li class='list-group-item'><b>Family (Scientific):</b> " + tree_info.family + "</li><li class='list-group-item'><b>Family (Common):</b> " + tree_info.family_common + "</li><li class='list-group-item'><b>Order:</b> " + tree_info.order_plant + "</li><li class='list-group-item'><b>Plantation Date:</b> " + planted_da + "</li><li class='list-group-item'><b>Tree Diameter:</b> " + tree_info.diam + "</li><li class='list-group-item'><b>Address:</b> " + tree_info.unitdesc +"</li><li class='list-group-item'><b>Tree Height:</b> " + tree_info.treeheight + "</li><li class='list-group-item'><b>Ownership:</b> " + tree_info.ownership + "</li><li class='list-group-item'><b>Last time it has been verified:</b> " + last_verif + '</li>'; 
-				}); // end of getjson function
-				if ($(".sidebar").hasClass('collapsed')) {
-				    collapse_sidebar();
-				};
-				//show tree tab
-				$("#top-sidebar li").removeClass("active");
-				$(".tab-content div").removeClass("active");
-				$("#tree_top_sidebar").addClass("active");
-				$("#home").addClass("in active");
-	    } // end of show_info_marker
 
 	    function remove_markers(filter) {
 	    	        for (var i = 0; i < size; ++i) {

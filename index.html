@@ -31,8 +31,9 @@
                       
                     <div id="home" class="tab-pane fade in active">
                         <h3>Tree</h3>
-                        <p id="tree_intro">Click a tree to get more information on it and/or edit its characteristics.</p>
-                        <ul class="list-group" id="detail_tree"></ul>
+                        <div id="detail_tree">
+                          <p id="tree_intro">Click a tree to get more information on it and/or edit its characteristics.</p>
+                        </div>
                     </div>
 
                     <div id="detail_neighborhood" class="tab-pane fade">
@@ -55,8 +56,6 @@
 
           <div class="col-md-9" id="map-container">
 
-<!--             <div id="progress"><div id="progress-bar"></div></div>
- -->
               <div id="map-canvas">
 
                     <button type="button" class="btn toggle-sidebar">
@@ -129,9 +128,6 @@
 <script type='text/javascript' src='js/leaflet.js'></script>
 <script src='https://api.mapbox.com/mapbox.js/v2.4.0/mapbox.js'></script>
 
-<!-- <script type='text/javascript' src='js/leaflet.markercluster.js'></script> -->
-<!-- <script type='text/javascript' src="js/subgroup.js"></script>
- --><!-- <script type='text/javascript' src="js/leaflet.markercluster.layersupport-src.js"></script> -->
 <script type='text/javascript' src='js/d3.js'></script>
 <script type='text/javascript' src='js/d3-tip.js'></script>
 <script type='text/javascript' src="js/PruneCluster.js"></script>
