@@ -54,10 +54,13 @@ $(document).ready(function() {
 
 
 	//add the mapbox layer
-	L.mapbox.accessToken = 'pk.eyJ1IjoiZGVicmljYXNzYXJ0IiwiYSI6IndfVTRGZTQifQ.AnvALWzOAOxnzwSvy7Evfg';
-	var featureLayer = L.mapbox.featureLayer();
+	//L.mapbox.accessToken = 'pk.eyJ1IjoiZGVicmljYXNzYXJ0IiwiYSI6IndfVTRGZTQifQ.AnvALWzOAOxnzwSvy7Evfg';
+	//var featureLayer = L.mapbox.featureLayer();
 
-	featureLayer.loadID('debricassart.1lo1j111');
+	//featureLayer.loadID('debricassart.1m5e0loa');
+
+	var featureLayer = L.mapbox.featureLayer('js/seattle_neighborhoods.geojson');
+	console.log(featureLayer);
 
 	//get the lookup_family and lookup_order for switching between layers
 	var lookup_family = {},
@@ -89,7 +92,7 @@ $(document).ready(function() {
 
 	//draw the new markers when you stop dragging the map
 	map.on('dragend', function onDragEnd(){
-		redraw_clusters();
+		(zoom > 16) ? initialize_trees() : redraw_clusters();
 	   });
 
 	map.on('zoomend', function onDragEnd(){
@@ -103,10 +106,6 @@ $(document).ready(function() {
 			redraw_clusters();
 			}
 		}
-		// (new_zoom> 16)? remove_all_markers() :
-		// if (new_zoom < zoom) {
-		// 	redraw_clusters();
-		// }
 		zoom = new_zoom;
 	   });
 
@@ -128,7 +127,8 @@ $(document).ready(function() {
     			limits = previous_nhood.getBounds();
     			map.fitBounds(limits);
 
-    			redraw_clusters();
+    			zoom = map.getZoom();
+    			(zoom > 16) ? initialize_trees() : redraw_clusters();
     		} // end of on change function
 
     	}); //end of multiselect click event
@@ -142,16 +142,19 @@ $(document).ready(function() {
 	} // end of function redraw_clusters
 
 	function initialize_neighborhoods() {
+		var neighborhood_content = '<option value=-1>No neighborhood selected</option>';
+		var neighborhood_container = document.getElementById("neighborhoods");
 		featureLayer.on('ready', function() {
 		    featureLayer.eachLayer(function(layer) {
 		    	nhood = layer.feature.properties.nhood;
 		    	name = layer.feature.properties.name;
 		    	if (nhood == name) {
-		    		  $('#neighborhoods').append('<option value="' + layer._leaflet_id + '">'+name+'</option>');
+		    		neighborhood_content += '<option value="' + layer._leaflet_id + '">'+name+'</option>';
 		    	}
 		    	else {
-				      $('#neighborhoods').append('<option value="' + layer._leaflet_id + '">'+name+ ' (in ' + nhood + ')</option>');
+		    		neighborhood_content += '<option value="' + layer._leaflet_id + '">'+name+ ' (in ' + nhood + ')</option>';
 		    	};
+		    	neighborhood_container.innerHTML = neighborhood_content;
 		    	$("#neighborhoods").multiselect("rebuild");
 	    	});
 		});
@@ -359,27 +362,27 @@ $(document).ready(function() {
 	            onChange: function(option, checked, select) {
 	            	filter = option.val();
 	                if (checked) {
-	                	zoom > 15 ? console.log("too zoomed in") : add_markers(filter);
+	                	zoom > 15 ? showLayer(filter) : add_markers(filter);
 	                	//add_markers(filter);
 	                	$('#family-filter').multiselect('select',option.attr("family"));
 	                	$('#order-filter').multiselect('select',option.attr("order"));
 	                }
 	                else {
-	                	remove_markers(filter);
+	                	zoom > 15 ? removeLayer(filter) : remove_markers(filter);
 	                	$('#family-filter').multiselect('deselect',option.attr("family"));
 	                	$('#order-filter').multiselect('deselect',option.attr("order"));
 	                }     
 	                
 	            }, //end of onchange function
 	            onSelectAll: function() {
-	            	add_all_markers();
+	            	zoom > 15 ? showallLayer() : add_all_markers();
 	            	$("#family-filter").multiselect("selectAll", false);
 				    $("#family-filter").multiselect("refresh");
 				    $("#order-filter").multiselect("selectAll", false);
 				    $("#order-filter").multiselect("refresh");
 	            }, //end of onselectall function
 	            onDeselectAll: function() {
-	            	remove_all_markers();
+	            	zoom > 15 ? clearallLayers : remove_all_markers();
 	            	$("#family-filter").multiselect("deselectAll", false);
 				    $("#family-filter").multiselect("refresh");
 				    $("#order-filter").multiselect("deselectAll", false);
@@ -398,13 +401,13 @@ $(document).ready(function() {
 	                filter = option.val();
 	                if (checked) {
 	                	$('#genus-filter option').filter('[order="'+ filter +'"]').prop('selected', true).each(function() {
-	                		add_markers($(this).val());
+	                		zoom > 15 ? showLayer($(this).val()) : add_markers($(this).val());
 	                	});
 	                	$('#family-filter option').filter('[order="'+ filter +'"]').prop('selected', true);
 	                }
 	                else {
 	                	$('#genus-filter option').filter('[order="'+ filter +'"]').prop('selected', false).each(function() {
-	                		remove_markers($(this).val());
+	                		zoom > 15 ? removeLayer($(this).val()) : remove_markers($(this).val());
 	                	});
 	                	$('#family-filter option').filter('[order="'+ filter +'"]').prop('selected', true);
 	                }
@@ -416,14 +419,14 @@ $(document).ready(function() {
 				    $("#family-filter").multiselect("refresh");
 				    $("#genus-filter").multiselect("selectAll", false);
 				    $("#genus-filter").multiselect("refresh");
-				    add_all_markers();
+				    zoom > 15 ? showallLayer() : add_all_markers();
 	            }, //end of onselectall function
 	            onDeselectAll: function() {
 	            	$("#family-filter").multiselect("deselectAll", false);
 				    $("#family-filter").multiselect("refresh");
 				    $("#genus-filter").multiselect("deselectAll", false);
 				    $("#genus-filter").multiselect("refresh");
-				    remove_all_markers();
+				    zoom > 15 ? clearallLayers : remove_all_markers();
 	            } //end of onselectall function
 	        });
 
@@ -438,13 +441,13 @@ $(document).ready(function() {
 	                filter = option.val();
 	                if (checked) {
 	                	$('#genus-filter option').filter('[family="'+filter+'"]').prop('selected', true).each(function() {
-	                		add_markers($(this).val());
+	                		zoom > 15 ? showLayer($(this).val()) : add_markers($(this).val());
 	                	});
 	                	$('#order-filter').multiselect('select',lookup_family[filter]);
 	                }
 	                else {
 	                	$('#genus-filter option').filter('[family="'+filter+'"]').prop('selected', false).each(function() {
-	                		remove_markers($(this).val());
+	                		zoom > 15 ? removeLayer($(this).val()) : remove_markers($(this).val());
 	                	});
 	                	$('#order-filter').multiselect('deselect',lookup_family[filter]);
 	                }
@@ -455,14 +458,14 @@ $(document).ready(function() {
 				    $("#order-filter").multiselect("refresh");
 				    $("#genus-filter").multiselect("selectAll", false);
 				    $("#genus-filter").multiselect("refresh");
-				    add_all_markers();
+				    zoom > 15 ? showallLayer() : add_all_markers();
 	            }, //end of onselectall function
 	            onDeselectAll: function() {
 	            	$("#order-filter").multiselect("deselectAll", false);
 				    $("#order-filter").multiselect("refresh");
 				    $("#genus-filter").multiselect("deselectAll", false);
 				    $("#genus-filter").multiselect("refresh");
-				    remove_all_markers();
+				    zoom > 15 ? clearallLayers : remove_all_markers();
 	            } //end of onselectall function
 	        });
 
