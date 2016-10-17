@@ -161,9 +161,15 @@ $(document).ready(function() {
     		onChange: function(option, select) {
 
     			var current_nhood = option.val();
-
-    			if (previous_nhood == -1) {
-    				initialize_graphs(current_nhood);
+    			(previous_nhood != -1) && map.removeLayer(featureLayer.getLayer(previous_nhood));
+    			if (current_nhood == -1) {
+    					d3.select("#chart_genus")
+    					.select("svg").remove();
+    					d3.select("#chart_date")
+    					.select("svg").remove();
+    			}
+    			else {
+    				draw_graphs(current_nhood);
     				var layer = featureLayer.getLayer(current_nhood);
     				layer.addTo(map);
     				limits = layer.getBounds();
@@ -171,88 +177,12 @@ $(document).ready(function() {
 
 	    			clear_map();
 	    			init_map();
-
-	    			// if (zoom > 16) {
-	    			// 	clearallLayers();
-	    			// 	initialize_trees();
-	    			// }
-	    			// else {
-	    			// 	remove_all_markers();
-	    			// 	redraw_clusters();
-	    			// }
     			}
-
-    			else {
-    				map.removeLayer(featureLayer.getLayer(previous_nhood));
-
-    				if (current_nhood == -1) {
-    					d3.select("#chart_genus")
-    					.select("svg").remove();
-    					d3.select("#chart_date")
-    					.select("svg").remove();
-    				}
-
-    				else {
-    					update_graphs(current_nhood);
-    					var layer = featureLayer.getLayer(current_nhood);
-	    				layer.addTo(map);
-	    				limits = layer.getBounds();
-		    			map.fitBounds(limits);
-		    			// (zoom > 16) ? return{clearallLayers(),initialize_trees} : return{remove_all_markers(),redraw_clusters()};
-		    			clear_map();
-		    			init_map()
-			    		//update_graphs(current_nhood);
-			    	}
-
-    			}
-
     			previous_nhood = current_nhood;
 
     		} // end of on change function
 
     	}); //end of multiselect click event
-
-    	// 		var current_nhood = option.val();
-
-    	// 		if (previous_nhood !== undefined) {
-    	// 			map.removeLayer(previous_nhood);
-    	// 			// if (current_nhood == -1) {
-    	// 			// 	d3.select("#chart_genus")
-    	// 			// 		.select("svg").remove();
-    	// 			// 	d3.select("#chart_date")
-    	// 			// 		.select("svg").remove();
-    	// 			// }
-
-    	// 			if (current_nhood != -1) {
-		   //  			update_graphs(current_nhood);
-    	// 			}
-    	// 		}
-
-    	// 		else {
-    	// 			initialize_graphs(current_nhood);
-    	// 		}
-
-    	// 		if (current_nhood == -1) {
-    	// 			d3.select("#chart_genus")
-    	// 					.select("svg").remove();
-    	// 			d3.select("#chart_date")
-    	// 					.select("svg").remove();
-    	// 		}
-
-    	// 		else {
-    	// 			previous_nhood = featureLayer.getLayer(current_nhood);
-
-	    // 			previous_nhood.addTo(map);
-	    // 			limits = previous_nhood.getBounds();
-	    // 			map.fitBounds(limits);
-
-	    // 			zoom = map.getZoom();
-	    // 			(zoom > 16) ? initialize_trees() : redraw_clusters();
-    	// 		}
-
-    	// 	} // end of on change function
-
-    	// }); //end of multiselect click event
 
 	function redraw_clusters() {
 
@@ -672,6 +602,13 @@ $(document).ready(function() {
 ///////////////////////////////////////////////////////
 ////graphs functions
 
+function draw_graphs(nhood) {
+
+	var elem = document.getElementById('svg_genus');
+    (elem == null) ? initialize_graphs(nhood) : update_graphs(nhood);
+
+}
+
 function initialize_graphs(nhood) {
 
 	    var width = parseInt(d3.select('#chart_genus').style('width')) - margin.left - margin.right;
@@ -697,6 +634,7 @@ function initialize_graphs(nhood) {
 		function draw_graph_genus(nhood) {
 
 		    	svg_genus = d3.select("#chart_genus").append("svg")
+		    		.attr("id","svg_genus")
 				    .attr("width", width + margin.left + margin.right)
 				    .attr("height", height + margin.top + margin.bottom);
 			
