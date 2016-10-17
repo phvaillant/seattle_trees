@@ -30,6 +30,42 @@ var your_tile = L.tileLayer('http://stamen-tiles-{s}.a.ssl.fastly.net/watercolor
 	attribution: 'Map tiles by <a href="http://stamen.com">Stamen Design</a>, <a href="http://creativecommons.org/licenses/by/3.0">CC BY 3.0</a> &mdash; Map data &copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>'
 	,ext: 'png', minZoom:12, maxZoom:17});
 
+//format for date - used later in date grpah
+var timeFormat = d3.timeFormat("%Y-%m");
+
+//store some variables for drawing, updating and resizing the graphs
+var x_genus = d3.scaleBand(),
+	x_date = d3.scaleTime(),
+	y = d3.scaleLinear(),
+	tip = d3.tip(),
+	svg_genus, chart_genus,
+	svg_date, chart_date,
+	height,
+	line = d3.line().x(function(d) { return x_date(new Date(d.planted_da)); })
+					    .y(function(d) { return y(+d.total); }),
+	//Divides date for tooltip placement
+	bisectDate = d3.bisector(function(d) { return d.planted_da; }).left,
+	focus;
+
+//store some variables for modal graphs
+var x_genus_modal = d3.scaleBand(),
+	x_date_modal = d3.scaleTime(),
+	y_modal = d3.scaleLinear(),
+	tip_modal = d3.tip(),
+	focus_modal,
+	svg_genus_modal, chart_genus_modal,
+	svg_date_modal, chart_date_modal,
+	line_modal = d3.line().x(function(d) { return x_date_modal(new Date(d.planted_da)); })
+					    .y(function(d) { return y_modal(+d.total); });
+
+//margin function for the graph
+var margin = {top: 20, right: 20, bottom: 70, left: 40};
+
+var width_modal = 0.9*window.innerWidth - margin.left - margin.right;
+
+var height_modal = 0.9*window.innerHeight - margin.top - margin.bottom - 45;
+
+
 $(document).ready(function() {
 
 	var t10 = performance.now();
@@ -116,28 +152,107 @@ $(document).ready(function() {
 	//resize svg on resize / use of leaflet map event because conflict with d3 and jquery resize event
 	map.on('resize', function() {
 		(zoom > 16) ? initialize_trees() : redraw_clusters();
-	})
+		//resize_graphs;
+	});
 
 	//click event of neighborhoods
-	var previous_nhood;
+	var previous_nhood = -1;
 	$('#neighborhoods').multiselect({
     		onChange: function(option, select) {
 
-    			if (previous_nhood !== undefined) {
-    				map.removeLayer(previous_nhood);
+    			var current_nhood = option.val();
+
+    			if (previous_nhood == -1) {
+    				initialize_graphs(current_nhood);
+    				var layer = featureLayer.getLayer(current_nhood);
+    				layer.addTo(map);
+    				limits = layer.getBounds();
+	    			map.fitBounds(limits);
+
+	    			clear_map();
+	    			init_map();
+
+	    			// if (zoom > 16) {
+	    			// 	clearallLayers();
+	    			// 	initialize_trees();
+	    			// }
+	    			// else {
+	    			// 	remove_all_markers();
+	    			// 	redraw_clusters();
+	    			// }
     			}
 
-    			previous_nhood = featureLayer.getLayer(option.val());
+    			else {
+    				map.removeLayer(featureLayer.getLayer(previous_nhood));
 
-    			previous_nhood.addTo(map);
-    			limits = previous_nhood.getBounds();
-    			map.fitBounds(limits);
+    				if (current_nhood == -1) {
+    					d3.select("#chart_genus")
+    					.select("svg").remove();
+    					d3.select("#chart_date")
+    					.select("svg").remove();
+    				}
 
-    			zoom = map.getZoom();
-    			(zoom > 16) ? initialize_trees() : redraw_clusters();
+    				else {
+    					update_graphs(current_nhood);
+    					var layer = featureLayer.getLayer(current_nhood);
+	    				layer.addTo(map);
+	    				limits = layer.getBounds();
+		    			map.fitBounds(limits);
+		    			// (zoom > 16) ? return{clearallLayers(),initialize_trees} : return{remove_all_markers(),redraw_clusters()};
+		    			clear_map();
+		    			init_map()
+			    		//update_graphs(current_nhood);
+			    	}
+
+    			}
+
+    			previous_nhood = current_nhood;
+
     		} // end of on change function
 
     	}); //end of multiselect click event
+
+    	// 		var current_nhood = option.val();
+
+    	// 		if (previous_nhood !== undefined) {
+    	// 			map.removeLayer(previous_nhood);
+    	// 			// if (current_nhood == -1) {
+    	// 			// 	d3.select("#chart_genus")
+    	// 			// 		.select("svg").remove();
+    	// 			// 	d3.select("#chart_date")
+    	// 			// 		.select("svg").remove();
+    	// 			// }
+
+    	// 			if (current_nhood != -1) {
+		   //  			update_graphs(current_nhood);
+    	// 			}
+    	// 		}
+
+    	// 		else {
+    	// 			initialize_graphs(current_nhood);
+    	// 		}
+
+    	// 		if (current_nhood == -1) {
+    	// 			d3.select("#chart_genus")
+    	// 					.select("svg").remove();
+    	// 			d3.select("#chart_date")
+    	// 					.select("svg").remove();
+    	// 		}
+
+    	// 		else {
+    	// 			previous_nhood = featureLayer.getLayer(current_nhood);
+
+	    // 			previous_nhood.addTo(map);
+	    // 			limits = previous_nhood.getBounds();
+	    // 			map.fitBounds(limits);
+
+	    // 			zoom = map.getZoom();
+	    // 			(zoom > 16) ? initialize_trees() : redraw_clusters();
+    	// 		}
+
+    	// 	} // end of on change function
+
+    	// }); //end of multiselect click event
 
 	function redraw_clusters() {
 
@@ -480,12 +595,24 @@ $(document).ready(function() {
 
 	    } //end of function set multiselect options
 
+	    function init_map() {
+	    	(zoom > 16) ? initialize_trees() : redraw_clusters();
+	    }
+
+	    function clear_map() {
+	    	(zoom > 16) ? clearallLayers() : remove_all_markers();
+	    }
+
+	    function add_all_map() {
+	    	(zoom > 16) ? showallLayer() : add_all_markers();
+	    }
+
 	    function remove_markers(filter) {
 	    	        for (var i = 0; i < size; ++i) {
 			            markers[i].filtered = (markers[i].filtered | markers[i].data.genus == filter) ? true : false;
 			        }
 					pruneCluster.ProcessView();
-		} // end of filter_makers function
+		} // end of remove_markers function
 
 		function add_markers(filter) {
 	    	        for (var i = 0; i < size; ++i) {
@@ -541,5 +668,645 @@ $(document).ready(function() {
 				layer.clearLayers();
 			}
 		}
+
+///////////////////////////////////////////////////////
+////graphs functions
+
+function initialize_graphs(nhood) {
+
+	    var width = parseInt(d3.select('#chart_genus').style('width')) - margin.left - margin.right;
+
+		height = parseInt(d3.select('#chart_genus').style('height')) - margin.top - margin.bottom;
+
+			// set the ranges
+		x_genus.range([0, width])
+				          .padding(0.1);
+
+		x_date.range([0, width]);
+
+		y.range([height, 0]);
+
+		draw_graph_genus(nhood);
+
+		initialize_graph_genus_modal();
+
+		draw_graph_date(nhood);
+
+		initialize_graph_date_modal();
+
+		function draw_graph_genus(nhood) {
+
+		    	svg_genus = d3.select("#chart_genus").append("svg")
+				    .attr("width", width + margin.left + margin.right)
+				    .attr("height", height + margin.top + margin.bottom);
+			
+				svg_genus.on('click', function() {
+					update_graph_genus_modal(nhood);
+					$("#graph_modal").modal();
+				});
+
+				chart_genus = svg_genus.append("g")
+							.attr("class","chart")
+					    	.attr("transform", 
+					          "translate(" + margin.left + "," + margin.top + ")");
+
+				tip.attr('class', 'd3-tip')
+						  .offset([-10, 0])
+						  .html(function(d) {
+						    return "<strong>Number of trees:</strong> <span style='color:red'>" + d.total + "</span>";
+						  });
+
+				svg_genus.call(tip);
+
+				$.getJSON( root_api + "trees/common/neighborhood/" + nhood, function(data) {
+
+					// format the data
+					  data.forEach(function(d) {
+					    d.total = +d.total;
+					  });
+
+					  // Scale the range of the data in the domains
+					  x_genus.domain(data.map(function(d) { return d.genus; }));
+					  y.domain([0, d3.max(data, function(d) { return d.total; })]);
+
+					  // append the rectangles for the bar chart
+					  chart_genus.selectAll(".bar")
+					      .data(data, function(d) { return d.genus; })
+					    .enter().append("rect")
+					      .attr("class", "bar")
+					      .attr("x", function(d) { return x_genus(d.genus); })
+					      .attr("width", x_genus.bandwidth())
+					      .attr("y", function(d) { return y(d.total); })
+					      .attr("height", function(d) { return height - y(d.total); })
+		      			  .on('mouseover', function(d,i) {
+		      			  	previous_marker.setIcon(treeicon);
+		      			  	tip.show(d,i);
+		      			  	mapLayerGroups[d.genus].eachLayer(function(marker) {
+		      			  		marker.setIcon(treeicon_red);
+		      			  	});
+		      			  })
+		      			  .on('mouseout', function(d,i) {
+		      			  	tip.hide(d,i);
+		      			  	mapLayerGroups[d.genus].eachLayer(function(marker) {
+		      			  		marker.setIcon(treeicon);
+		      			  	});
+		      			  });
+
+					  // add the x Axis
+					  chart_genus.append("g")
+					  	  .attr("class","xaxis")
+					      .attr("transform", "translate(0," + height + ")")
+					      .call(d3.axisBottom(x_genus))
+					      .selectAll("text")
+						    .attr("y", 0)
+						    .attr("x", 9)
+						    .attr("dy", ".35em")
+						    .attr("transform", "rotate(90)")
+						    .style("text-anchor", "start");;
+
+					  // add the y Axis
+					  chart_genus.append("g")
+					      .attr("class","yaxis")
+					      .call(d3.axisLeft(y));
+
+				}); //end of function getjson
+
+		} // end of function draw_graph_genus
+
+		function draw_graph_date(nhood) {
+
+				svg_date = d3.select("#chart_date").append("svg")
+				    .attr("width", width + margin.left + margin.right)
+				    .attr("height", height + margin.top + margin.bottom);
+
+				svg_date.on('click', function() {
+					update_graph_date_modal(nhood);
+					$("#graph_modal_date").modal();
+				});
+				  
+				chart_date = svg_date.append("g")
+				  	.attr("class","chart")
+				    .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+				$.getJSON( root_api + "trees/date/neighborhood/" + nhood, function(data) {
+
+				  x_date.domain(d3.extent(data, function(d) { return new Date(d.planted_da); }));
+				  y.domain(d3.extent(data, function(d) { return +d.total; }));
+
+				  //Tooltips
+				  focus = chart_date.append("g")
+				      .attr("class", "focus")
+				      .style("display", "none");
+
+				  //Adds circle to focus point on line
+				  focus.append("circle")
+				      .attr("r", 4);
+
+				  //Adds text to focus point on line    
+				  focus.append("text")
+				      .attr("x", 9)
+				      .attr("dy", ".35em");    
+				  
+				  //Creates larger area for tooltip   
+				  var overlay = chart_date.append("rect")
+				      .attr("class", "overlay")
+				      .attr("width", width)
+				      .attr("height", height)
+				      .on("mouseover", function() { focus.style("display", null); })
+				      .on("mouseout", function() { focus.style("display", "none"); })
+				      .on("mousemove", mousemove);
+				  
+				  //Tooltip mouseovers            
+				  function mousemove() {
+				    var x0 = x_date.invert(d3.mouse(this)[0]),
+				        i = bisectDate(data, x0, 1),
+				        d0 = data[i - 1],
+				        d1 = data[i],
+				        d = x0 - d0.planted_da > d1.planted_da - x0 ? d1 : d0;
+				    focus.attr("transform", "translate(" + x_date(d.planted_da) + "," + y(d.total) + ")");
+				    focus.select("text").text(d.total);
+				  }; 
+
+				  chart_date.append("g")
+				      .attr("class", "xaxis")
+				      .attr("transform", "translate(0," + height + ")")
+				      .call(d3.axisBottom(x_date))
+				      .selectAll("text")
+						    .attr("y", 0)
+						    .attr("x", 9)
+						    .attr("dy", ".35em")
+						    .attr("transform", "rotate(90)")
+						    .style("text-anchor", "start"); ;
+
+				  chart_date.append("g")
+				      .attr("class", "yaxis")
+				      .call(d3.axisLeft(y))
+				    .append("text")
+				      .attr("class", "axis-title")
+				      .attr("transform", "rotate(-90)")
+				      .attr("y", 6)
+				      .attr("dy", ".71em")
+				      .style("text-anchor", "end")
+				      .text("Number of trees planted");
+
+				  chart_date.append("path")
+				      .datum(data)
+				      .attr("class", "line")
+				      .attr("d", line);
+
+				}); //end of getjson function
+
+	    	} // end of function draw_graph_date
+
+	    } // end of function initialize_graphs
+
+	    function initialize_graph_genus_modal() {
+
+			// set the ranges
+			x_genus_modal.range([0, width_modal])
+				          .padding(0.1);
+
+			y_modal.range([height_modal, 0]);
+
+			svg_genus_modal = d3.select("#graph_modal").select(".modal-body").append("svg")
+				    .attr("width", width_modal + margin.left + margin.right)
+				    .attr("height", height_modal + margin.top + margin.bottom);
+			
+			chart_genus_modal = svg_genus_modal.append("g")
+							.attr("class","chart")
+					    	.attr("transform", 
+					          "translate(" + margin.left + "," + margin.top + ")");
+
+			tip_modal.attr('class', 'd3-tip modal-tip')
+						  .offset([-10, 0])
+						  .html(function(d) {
+						    return "<strong>Number of trees:</strong> <span style='color:red'>" + d.total + "</span>";
+						  });
+
+			svg_genus_modal.call(tip_modal);
+
+	    } // end of function draw_graph_genus_modal
+
+	    function update_graph_genus_modal(nhood) {
+
+			$.getJSON( root_api + "trees/common/neighborhood/" + nhood, function(data) {
+
+					// format the data
+					  data.forEach(function(d) {
+					    d.total = +d.total;
+					  });
+
+					  // Scale the range of the data in the domains
+					  x_genus_modal.domain(data.map(function(d) { return d.genus; }));
+					  y_modal.domain([0, d3.max(data, function(d) { return d.total; })]);
+
+					  var bar = chart_genus_modal.selectAll(".bar")
+	        			.data(data, function(d) { return d.genus; });
+
+	        		//enter new data
+	        		bar.enter().append("rect")
+					   .attr("class", "bar")
+					   .on('mouseover', function(d,i) {
+		      			  	tip_modal.show(d,i);
+		      			  })
+	      			  .on('mouseout', function(d,i) {
+	      			  	tip_modal.hide(d,i);
+	      			    })
+						   .attr("x", function(d) { return x_genus_modal(d.genus); })
+						   .attr("y", function(d) { return y_modal(d.total); })
+						   .attr("height", function(d) { return height_modal - y_modal(d.total); })
+						   .attr("width", x_genus_modal.bandwidth());
+
+	        		//remove the bars not corresponding to new genus
+	        		bar.exit().remove();
+
+	        		//update bars already present
+	        		bar.attr("x", function(d) { return x_genus_modal(d.genus); })
+								.attr("y", function(d) { return y_modal(d.total); })
+								.attr("height", function(d) { return height_modal - y_modal(d.total); })
+								.attr("width", x_genus_modal.bandwidth());
+
+					//remove preivous axes
+					chart_genus_modal.select(".yaxis").remove();
+					chart_genus_modal.select(".xaxis").remove();
+
+					//draw x axis
+					chart_genus_modal.append("g")
+					  	  .attr("class","xaxis")
+					      .attr("transform", "translate(0," + height_modal + ")")
+					      .call(d3.axisBottom(x_genus_modal))
+					      .selectAll("text")
+						    .attr("y", 0)
+						    .attr("x", 9)
+						    .attr("dy", ".35em")
+						    .attr("transform", "rotate(90)")
+						    .style("text-anchor", "start"); 
+
+					//draw y axis
+					chart_genus_modal.append("g")
+					      .attr("class","yaxis")
+					      	.call(d3.axisLeft(y_modal));
+
+			}); // end of getjson function
+
+	    } // end of update graph modal function
+
+	    function initialize_graph_date_modal() {
+
+	    	// set the ranges
+			x_date_modal.range([0, width_modal]);
+
+	    	svg_date_modal = d3.select("#graph_modal_date").select(".modal-body").append("svg")
+				    .attr("width", width_modal + margin.left + margin.right)
+				    .attr("height", height_modal + margin.top + margin.bottom);
+			
+			chart_date_modal = svg_date_modal.append("g")
+							.attr("class","chart")
+					    	.attr("transform", 
+					          "translate(" + margin.left + "," + margin.top + ")");
+
+			//Tooltips
+			focus_modal = chart_date_modal.append("g")
+				      .attr("class", "focus")
+				      .style("display", "none");
+
+			//Adds circle to focus point on line
+			focus_modal.append("circle")
+				      .attr("r", 4);
+
+			//Adds text to focus point on line    
+			focus_modal.append("text")
+				      .attr("x", 9)
+				      .attr("dy", ".35em");    
+				  
+			//Creates larger area for tooltip   
+			var overlay = chart_date_modal.append("rect")
+				      .attr("class", "overlay")
+				      .attr("width", width_modal)
+				      .attr("height", height_modal)
+				      .on("mouseover", function() { focus_modal.style("display", null); })
+				      .on("mouseout", function() { focus_modal.style("display", "none"); });
+
+			chart_date_modal.append("path")
+				      .attr("class", "line")
+
+			chart_date_modal.append("g")
+				      .attr("class", "xaxis")
+				      .attr("transform", "translate(0," + height_modal + ")")
+				      .call(d3.axisBottom(x_date_modal))
+				      .selectAll("text")
+						    .attr("y", 0)
+						    .attr("x", 9)
+						    .attr("dy", ".35em")
+						    .attr("transform", "rotate(90)")
+						    .style("text-anchor", "start"); ;
+
+			chart_date_modal.append("g")
+				      .attr("class", "yaxis")
+				      .call(d3.axisLeft(y_modal))
+				    .append("text")
+				      .attr("class", "axis-title")
+				      .attr("transform", "rotate(-90)")
+				      .attr("y", 6)
+				      .attr("dy", ".71em")
+				      .style("text-anchor", "end")
+				      .text("Number of trees planted");
+
+	    } // end of initialize graph date modal function
+
+	    function update_graph_date_modal(nhood) {
+
+	    	$.getJSON( root_api + "trees/date/neighborhood/" + nhood, function(data) {
+
+					  // Scale the range of the data in the domains
+					  x_date_modal.domain(d3.extent(data, function(d) { return new Date(d.planted_da); }));
+				  	  y_modal.domain(d3.extent(data, function(d) { return +d.total; }));
+
+				  	  svg = svg_date_modal.select(".line").datum(data);
+					  svg.transition()
+					  		.duration(750).attr("d", line_modal);
+
+			          svg_date_modal.transition().select(".xaxis") // change the x axis
+			            .duration(750)
+			            .call(d3.axisBottom(x_date_modal))
+			            .selectAll("text")
+						    .attr("y", 0)
+						    .attr("x", 9)
+						    .attr("dy", ".35em")
+						    .attr("transform", "rotate(90)")
+						    .style("text-anchor", "start"); ;
+
+			          svg_date_modal.transition().select(".yaxis") // change the y axis
+			            .duration(750)
+			            .call(d3.axisLeft(y_modal));
+
+			          chart_date_modal.select(".overlay")
+			          			.on("mousemove",mousemove);
+
+			          //Tooltip mouseovers            
+					  function mousemove() {
+					    var x0 = x_date_modal.invert(d3.mouse(this)[0]),
+					        i = bisectDate(data, x0, 1),
+					        d0 = data[i - 1],
+					        d1 = data[i],
+					        d = x0 - d0.planted_da > d1.planted_da - x0 ? d1 : d0;
+					    focus_modal.attr("transform", "translate(" + x_date_modal(d.planted_da) + "," + y_modal(d.total) + ")");
+					    focus_modal.select("text").text(d.total);
+					  }; 
+
+				}); //end of getjson function
+
+	    } // end of update graph date modal function
+
+
+
+	    function update_graphs(nhood) {
+
+	    	update_graph_genus(nhood);
+
+	    	update_graph_date(nhood);
+
+	    	function update_graph_date(nhood) {
+
+	    		svg_date.on('click', function() {
+					$("#graph_modal_date").modal();
+					update_graph_date_modal(nhood);
+				});
+
+		    	 $.getJSON( root_api + "trees/date/neighborhood/" + nhood, function(data) {
+
+					  // Scale the range of the data in the domains
+					  x_date.domain(d3.extent(data, function(d) { return new Date(d.planted_da); }));
+				  	  y.domain(d3.extent(data, function(d) { return +d.total; }));
+
+				  	  svg = svg_date.select(".line").datum(data);
+					  svg.transition()
+					  		.duration(750)
+					        .attr("d", line);
+
+			          svg_date.transition().select(".xaxis") // change the x axis
+			            .duration(750)
+			            .call(d3.axisBottom(x_date))
+			            .selectAll("text")
+						    .attr("y", 0)
+						    .attr("x", 9)
+						    .attr("dy", ".35em")
+						    .attr("transform", "rotate(90)")
+						    .style("text-anchor", "start"); ;
+
+			          svg_date.transition().select(".yaxis") // change the y axis
+			            .duration(750)
+			            .call(d3.axisLeft(y));
+
+			          chart_date.select(".overlay")
+			          			.on("mousemove",mousemove);
+
+			          //Tooltip mouseovers            
+					  function mousemove() {
+					    var x0 = x_date.invert(d3.mouse(this)[0]),
+					        i = bisectDate(data, x0, 1),
+					        d0 = data[i - 1],
+					        d1 = data[i],
+					        d = x0 - d0.planted_da > d1.planted_da - x0 ? d1 : d0;
+					    focus.attr("transform", "translate(" + x_date(d.planted_da) + "," + y(d.total) + ")");
+					    focus.select("text").text(d.total);
+					  }; 
+
+				}); //end of getjson function
+
+		    } // end of function update graph date
+
+	    	function update_graph_genus(nhood) {
+
+	    		svg_genus.on('click', function() {
+					$("#graph_modal").modal();
+					update_graph_genus_modal(nhood);
+				});
+
+	    		$.getJSON( root_api + "trees/common/neighborhood/" + nhood, function(data) {
+
+					// format the data
+					  data.forEach(function(d) {
+					    d.total = +d.total;
+					  });
+
+					  // Scale the range of the data in the domains
+					  x_genus.domain(data.map(function(d) { return d.genus; }));
+					  y.domain([0, d3.max(data, function(d) { return d.total; })]);
+
+					  var bar = chart_genus.selectAll(".bar")
+	        			.data(data, function(d) { return d.genus; });
+
+	        		//enter new data
+	        		bar.enter().append("rect")
+					   .attr("class", "bar")
+					   .on('mouseover', function(d,i) {
+		      			  	previous_marker.setIcon(treeicon);
+		      			  	tip.show(d,i);
+		      			  	mapLayerGroups[d.genus].eachLayer(function(marker) {
+		      			  		marker.setIcon(treeicon_red);
+		      			  	});
+		      			  })
+	      			  .on('mouseout', function(d,i) {
+	      			  	tip.hide(d,i);
+	      			  	mapLayerGroups[d.genus].eachLayer(function(marker) {
+		      			  		marker.setIcon(treeicon);
+		      			  	})
+	      			    })
+	       			   .transition()
+	       			   		.duration(750)
+						   .attr("x", function(d) { return x_genus(d.genus); })
+						   .attr("y", function(d) { return y(d.total); })
+						   .attr("height", function(d) { return height - y(d.total); })
+						   .attr("width", x_genus.bandwidth());
+
+	        		//remove the bars not corresponding to new genus
+	        		bar.exit().remove();
+
+	        		//update bars already present
+	        		bar.transition()
+	       			   		.duration(750)
+							   .attr("x", function(d) { return x_genus(d.genus); })
+								.attr("y", function(d) { return y(d.total); })
+								.attr("height", function(d) { return height - y(d.total); })
+								.attr("width", x_genus.bandwidth());
+
+					//remove preivous axes
+					chart_genus.select(".yaxis").remove();
+					chart_genus.select(".xaxis").remove();
+
+					//draw x axis
+					chart_genus.append("g")
+					  	  .attr("class","xaxis")
+					      .attr("transform", "translate(0," + height + ")")
+					      .call(d3.axisBottom(x_genus))
+					      .selectAll("text")
+						    .attr("y", 0)
+						    .attr("x", 9)
+						    .attr("dy", ".35em")
+						    .attr("transform", "rotate(90)")
+						    .style("text-anchor", "start"); 
+
+					//draw y axis
+					chart_genus.append("g")
+					      .attr("class","yaxis")
+					      .transition() // change the y axis
+				            .duration(750)
+					      	.call(d3.axisLeft(y));
+
+				}); //end of getjson function
+
+	    	} // end of update_graph_genus function
+	    	
+	    } // end of function update graphs
+
+	    function resize_graphs() {
+
+	    	width_modal = 0.9*window.innerWidth - margin.left - margin.right;
+
+	    	height_modal = 0.9*window.innerHeight - margin.top - margin.bottom - 45;
+
+	    	var width = parseInt(d3.select('#chart_genus').style('width')) - margin.left - margin.right;
+
+			height = parseInt(d3.select('#chart_genus').style('height')) - margin.top - margin.bottom;
+
+			// set the ranges
+			x_genus.range([0, width]);	
+			x_date.range([0, width]);		
+			y.range([height, 0]);
+
+			x_genus_modal.range([0, width_modal]);	
+			x_date_modal.range([0, width_modal]);		
+			y_modal.range([height_modal, 0]);
+
+			resize_graph_genus();
+			resize_graph_date();
+
+			resize_graph_genus_modal();
+			resize_graph_date_modal();
+
+			function resize_graph_genus() {
+
+				 svg_genus.attr("width", width + margin.left + margin.right)
+			    	.attr("height", height + margin.top + margin.bottom);
+
+				 chart_genus.attr("width", width + margin.left + margin.right)
+				    .attr("height", height + margin.top + margin.bottom);
+
+				 chart_genus.selectAll(".bar")
+				      .attr("x", function(d) { return x_genus(d.genus); })
+				      .attr("width", x_genus.bandwidth())
+				      .attr("y", function(d) { return y(d.total); })
+				      .attr("height", function(d) { return height - y(d.total); })
+
+				 chart_genus.select(".xaxis").attr("transform", "translate(0," + height + ")")
+				 				.call(d3.axisBottom(x_genus));
+
+				 chart_genus.select(".yaxis").call(d3.axisLeft(y));
+
+			} // end of resize graph genus function
+
+			function resize_graph_genus_modal() {
+
+				 svg_genus_modal.attr("width", width_modal + margin.left + margin.right)
+			    	.attr("height", height_modal + margin.top + margin.bottom);
+
+				 chart_genus_modal.attr("width", width_modal + margin.left + margin.right)
+				    .attr("height", height + margin.top + margin.bottom);
+
+				 chart_genus_modal.selectAll(".bar")
+				      .attr("x", function(d) { return x_genus_modal(d.genus); })
+				      .attr("width", x_genus_modal.bandwidth())
+				      .attr("y", function(d) { return y_modal(d.total); })
+				      .attr("height", function(d) { return height_modal - y_modal(d.total); })
+
+				 chart_genus_modal.select(".xaxis").attr("transform", "translate(0," + height_modal + ")")
+				 				.call(d3.axisBottom(x_genus_modal));
+
+				 chart_genus_modal.select(".yaxis").call(d3.axisLeft(y_modal));
+
+			} // end of resize graph genus function
+
+			function resize_graph_date() {
+
+				 svg_date.attr("width", width + margin.left + margin.right)
+			    	.attr("height", height + margin.top + margin.bottom);
+
+				 chart_date.attr("width", width + margin.left + margin.right)
+				    .attr("height", height + margin.top + margin.bottom);
+
+				 chart_date.select(".line")
+				      .attr("d", line);
+
+				 chart_date.select(".xaxis")
+				 	  .attr("transform", "translate(0," + height + ")")
+				      .call(d3.axisBottom(x_date));
+
+				 chart_date.select(".yaxis")
+				      .call(d3.axisLeft(y));
+
+			} // end of resize graph date function
+
+			function resize_graph_date_modal() {
+
+				 svg_date_modal.attr("width", width_modal + margin.left + margin.right)
+			    	.attr("height", height_modal + margin.top + margin.bottom);
+
+				 chart_date_modal.attr("width", width_modal + margin.left + margin.right)
+				    .attr("height", height_modal + margin.top + margin.bottom);
+
+				 chart_date_modal.select(".line")
+				      .attr("d", line_modal);
+
+				 chart_date_modal.select(".xaxis")
+				 	  .attr("transform", "translate(0," + height_modal + ")")
+				      .call(d3.axisBottom(x_date_modal));
+
+				 chart_date_modal.select(".yaxis")
+				      .call(d3.axisLeft(y_modal));
+
+			} // end of resize graph date function
+
+	    } // end of resize graphs function
 
 })//end of document ready function
