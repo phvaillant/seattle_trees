@@ -151,8 +151,9 @@ $(document).ready(function() {
 
 	//resize svg on resize / use of leaflet map event because conflict with d3 and jquery resize event
 	map.on('resize', function() {
-		(zoom > 16) ? initialize_trees() : redraw_clusters();
-		//resize_graphs;
+		clear_map();
+		init_map();
+		resize_graphs();
 	});
 
 	//click event of neighborhoods
@@ -186,7 +187,6 @@ $(document).ready(function() {
 
 	function redraw_clusters() {
 
-		//markers = [];
 		map.spin(true);
 		initialize_clusters();
 
@@ -279,21 +279,6 @@ $(document).ready(function() {
 	    	markers = [];
 	    	$.getJSON( root_api + "trees/" + map.getBounds().getSouth() + "/" + map.getBounds().getNorth() + "/" + map.getBounds().getWest() + "/" + map.getBounds().getEast(), function( data ) {
 
-	   //  		pruneCluster.PrepareLeafletMarker = function(leafletMarker, data) {
-				//     leafletMarker.setIcon(treeicon); // See http://leafletjs.com/reference.html#icon
-				//     //listeners can be applied to markers in this function
-				//     leafletMarker.on('click', function(){
-				//     	show_info_marker(leafletMarker,data);
-				//     });
-				//     leafletMarker.bindPopup(data.genus);
-				//     leafletMarker.on('mouseover', function (e) {
-				//             this.openPopup();
-				// 	});
-				// 	leafletMarker.on('mouseout', function (e) {
-				// 		    this.closePopup();
-				// 	});
-				// }; //end of prepareleafletmarker function
-
 				//Jquery method that allows you to iterate over an array: http://api.jquery.com/jquery.each/
 				$.each(data, function(k,v){
 
@@ -302,8 +287,6 @@ $(document).ready(function() {
 					marker.data.genus = v.genus;
 					marker.data.compkey = v.compkey;
 					marker.data.popup = v.genus;
-					//icon redrawing with a flag
-					//marker.data.forceIconRedraw = true;
 					marker.filtered = false;
 					pruneCluster.RegisterMarker(marker);
 					markers.push(marker);
@@ -380,7 +363,8 @@ $(document).ready(function() {
 				        		}
 				        		var detail_tree = document.getElementById("detail_tree");
 				        		console.log(tree_info,tree_info.wikipedia_url);
-				        		detail_tree.innerHTML = "<ul class='list-group'><li class='list-group-item'><b>Tree id:</b> " + tree_info.unitid + "</li><li class='list-group-item'><b>Species (Scientific):</b> " + tree_info.new_scientific + "</li><li class='list-group-item'><b>Species (Common):</b> " + tree_info.new_common_nam + "</li><li class='list-group-item'><b>Genus:</b> "+ tree_info.genus + "</li><li class='list-group-item'><b>Family (Scientific):</b> " + tree_info.family + "</li><li class='list-group-item'><b>Family (Common):</b> " + tree_info.family_common + "</li><li class='list-group-item'><b>Order:</b> " + tree_info.order_plant + "</li><li class='list-group-item'><b>Plantation Date:</b> " + planted_da + "</li><li class='list-group-item'><b>Tree Diameter:</b> " + tree_info.diam + "</li><li class='list-group-item'><b>Address:</b> " + tree_info.unitdesc +"</li><li class='list-group-item'><b>Tree Height:</b> " + tree_info.treeheight + "</li><li class='list-group-item'><b>Ownership:</b> " + tree_info.ownership + "</li><li class='list-group-item'><b>Last time it has been verified:</b> " + last_verif + "</li><li class='list-group-item'><b>Website for more information:</b> " + tree_info.wikipedia_url + '</li></ul>'; 
+				        		detail_tree.innerHTML = "<ul class='list-group'><li class='list-group-item'><b>Tree id:</b> " + tree_info.unitid + "</li><li class='list-group-item'><b>Species (Scientific):</b> " + tree_info.new_scientific + "</li><li class='list-group-item'><b>Species (Common):</b> " + tree_info.new_common_nam + "</li><li class='list-group-item'><b>Genus:</b> "+ tree_info.genus + "</li><li class='list-group-item'><b>Family (Scientific):</b> " + tree_info.family + "</li><li class='list-group-item'><b>Family (Common):</b> " + tree_info.family_common + "</li><li class='list-group-item'><b>Order:</b> " + tree_info.order_plant + "</li><li class='list-group-item'><b>Plantation Date:</b> " + planted_da + "</li><li class='list-group-item'><b>Tree Diameter:</b> " + tree_info.diam + "</li><li class='list-group-item'><b>Address:</b> " + tree_info.unitdesc +"</li><li class='list-group-item'><b>Tree Height:</b> " + tree_info.treeheight + "</li><li class='list-group-item'><b>Ownership:</b> " + tree_info.ownership + "</li><li class='list-group-item'><b>Last time it has been verified:</b> " + last_verif + "</li><li class='list-group-item'><a href=' " + tree_info.wikipedia_url + "' target='_blank'><b>Website for more information</b></a>" 
+
 				        	}); // end of getjson function
 				        	if ($(".sidebar").hasClass('collapsed')) {
 				        		collapse_sidebar();
@@ -602,14 +586,84 @@ $(document).ready(function() {
 ///////////////////////////////////////////////////////
 ////graphs functions
 
+// loader settings
+var target_chart_genus = document.getElementById('chart_genus');
+var target_chart_date = document.getElementById('chart_date');
+
+// loader settings
+var opts = {
+  lines: 9, // The number of lines to draw
+  length: 9, // The length of each line
+  width: 5, // The line thickness
+  radius: 14, // The radius of the inner circle
+  color: '#EE3124', // #rgb or #rrggbb or array of colors
+  speed: 1.9, // Rounds per second
+  trail: 40, // Afterglow percentage
+  className: 'spinner', // The CSS class to assign to the spinner
+};
+
+
+function init(nhood) {
+
+	console.log(target_chart_genus);
+
+	// trigger loader
+    var spinner_genus = new Spinner(opts).spin(target_chart_genus);
+    var spinner_date = new Spinner(opts).spin(target_chart_date);
+
+    //console.log(spinner);
+
+	d3.queue()
+		.defer(d3.json, root_api + "trees/common/neighborhood/" + nhood)
+		.defer(d3.json, root_api + "trees/date/neighborhood/" + nhood)
+		.awaitAll(start_graphs);
+
+	function start_graphs(error, data) {
+		//console.log(genus);
+		//console.log(date);
+		spinner_genus.stop();
+		spinner_date.stop();
+
+        // code to execute within callback
+        initialize_graphs(nhood,data[0],data[1]);
+	}
+
+    // load json data 
+    // d3.json(root_api + "trees/common/neighborhood/" + nhood, function(data) {
+
+    // 	//console.log()
+
+    //     // stop the loader
+    //     spinner.stop();
+
+    //     // code to execute within callback
+    //     initialize_graphs(nhood,data);
+
+    // });
+
+    // // load json data 
+    // d3.json( root_api + "trees/date/neighborhood/" + nhood, function(data) {
+
+    // 	//console.log()
+
+    //     // stop the loader
+    //     spinner.stop();
+
+    //     // code to execute within callback
+    //     initialize_graphs(nhood,data);
+
+    // });
+}
+
 function draw_graphs(nhood) {
 
 	var elem = document.getElementById('svg_genus');
-    (elem == null) ? initialize_graphs(nhood) : update_graphs(nhood);
+	(elem == null) ? init(nhood) : update_graphs(nhood);
+    //(elem == null) ? initialize_graphs(nhood) : update_graphs(nhood);
 
 }
 
-function initialize_graphs(nhood) {
+function initialize_graphs(nhood, data_genus, data_date) {
 
 	    var width = parseInt(d3.select('#chart_genus').style('width')) - margin.left - margin.right;
 
@@ -623,15 +677,15 @@ function initialize_graphs(nhood) {
 
 		y.range([height, 0]);
 
-		draw_graph_genus(nhood);
+		draw_graph_genus(nhood,data_genus);
 
 		initialize_graph_genus_modal();
 
-		draw_graph_date(nhood);
+		draw_graph_date(nhood, data_date);
 
 		initialize_graph_date_modal();
 
-		function draw_graph_genus(nhood) {
+		function draw_graph_genus(nhood,data_genus) {
 
 		    	svg_genus = d3.select("#chart_genus").append("svg")
 		    		.attr("id","svg_genus")
@@ -656,20 +710,24 @@ function initialize_graphs(nhood) {
 
 				svg_genus.call(tip);
 
-				$.getJSON( root_api + "trees/common/neighborhood/" + nhood, function(data) {
+				//$.getJSON( root_api + "trees/common/neighborhood/" + nhood, function(data) {
 
 					// format the data
-					  data.forEach(function(d) {
+					data_genus.forEach(function(d) {
+					  //data.forEach(function(d) {
 					    d.total = +d.total;
 					  });
 
 					  // Scale the range of the data in the domains
-					  x_genus.domain(data.map(function(d) { return d.genus; }));
-					  y.domain([0, d3.max(data, function(d) { return d.total; })]);
+					  x_genus.domain(data_genus.map(function(d) { return d.genus;}))
+					  //x_genus.domain(data.map(function(d) { return d.genus; }));
+					  y.domain([0, d3.max(data_genus, function(d) { return d.total;})]);
+					  //y.domain([0, d3.max(data, function(d) { return d.total; })]);
 
 					  // append the rectangles for the bar chart
 					  chart_genus.selectAll(".bar")
-					      .data(data, function(d) { return d.genus; })
+					  		.data(data_genus, function(d) { return d.genus;})
+					      //.data(data, function(d) { return d.genus; })
 					    .enter().append("rect")
 					      .attr("class", "bar")
 					      .attr("x", function(d) { return x_genus(d.genus); })
@@ -707,11 +765,11 @@ function initialize_graphs(nhood) {
 					      .attr("class","yaxis")
 					      .call(d3.axisLeft(y));
 
-				}); //end of function getjson
+				//}); //end of function getjson
 
 		} // end of function draw_graph_genus
 
-		function draw_graph_date(nhood) {
+		function draw_graph_date(nhood, data_date) {
 
 				svg_date = d3.select("#chart_date").append("svg")
 				    .attr("width", width + margin.left + margin.right)
@@ -726,10 +784,13 @@ function initialize_graphs(nhood) {
 				  	.attr("class","chart")
 				    .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 
-				$.getJSON( root_api + "trees/date/neighborhood/" + nhood, function(data) {
+				// $.getJSON( root_api + "trees/date/neighborhood/" + nhood, function(data) {
 
-				  x_date.domain(d3.extent(data, function(d) { return new Date(d.planted_da); }));
-				  y.domain(d3.extent(data, function(d) { return +d.total; }));
+				x_date.domain(d3.extent(data_date, function(d) { return new Date(d.planted_da); }));
+				 y.domain(d3.extent(data_date, function(d) { return +d.total; }));
+
+				  // x_date.domain(d3.extent(data, function(d) { return new Date(d.planted_da); }));
+				  // y.domain(d3.extent(data, function(d) { return +d.total; }));
 
 				  //Tooltips
 				  focus = chart_date.append("g")
@@ -754,16 +815,25 @@ function initialize_graphs(nhood) {
 				      .on("mouseout", function() { focus.style("display", "none"); })
 				      .on("mousemove", mousemove);
 				  
-				  //Tooltip mouseovers            
+				  //Tooltip mouseovers 
 				  function mousemove() {
 				    var x0 = x_date.invert(d3.mouse(this)[0]),
-				        i = bisectDate(data, x0, 1),
-				        d0 = data[i - 1],
-				        d1 = data[i],
+				        i = bisectDate(data_date, x0, 1),
+				        d0 = data_date[i - 1],
+				        d1 = data_date[i],
 				        d = x0 - d0.planted_da > d1.planted_da - x0 ? d1 : d0;
 				    focus.attr("transform", "translate(" + x_date(d.planted_da) + "," + y(d.total) + ")");
 				    focus.select("text").text(d.total);
-				  }; 
+				  };            
+				  // function mousemove() {
+				  //   var x0 = x_date.invert(d3.mouse(this)[0]),
+				  //       i = bisectDate(data, x0, 1),
+				  //       d0 = data[i - 1],
+				  //       d1 = data[i],
+				  //       d = x0 - d0.planted_da > d1.planted_da - x0 ? d1 : d0;
+				  //   focus.attr("transform", "translate(" + x_date(d.planted_da) + "," + y(d.total) + ")");
+				  //   focus.select("text").text(d.total);
+				  // }; 
 
 				  chart_date.append("g")
 				      .attr("class", "xaxis")
@@ -787,12 +857,17 @@ function initialize_graphs(nhood) {
 				      .style("text-anchor", "end")
 				      .text("Number of trees planted");
 
-				  chart_date.append("path")
-				      .datum(data)
+				 chart_date.append("path")
+				      .datum(data_date)
 				      .attr("class", "line")
 				      .attr("d", line);
 
-				}); //end of getjson function
+				  // chart_date.append("path")
+				  //     .datum(data)
+				  //     .attr("class", "line")
+				  //     .attr("d", line);
+
+				// }); //end of getjson function
 
 	    	} // end of function draw_graph_date
 
