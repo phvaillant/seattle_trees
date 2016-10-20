@@ -22,6 +22,18 @@ var treeicon_red = L.icon({
     popupAnchor: new L.Point(0, -10)
 });
 
+// loader settings
+var opts = {
+  lines: 10, // The number of lines to draw
+  length: 15, // The length of each line
+  width: 7, // The line thickness
+  radius: 14, // The radius of the inner circle
+  //color: '#EE3124', // #rgb or #rrggbb or array of colors
+  speed: 1.9, // Rounds per second
+  trail: 40, // Afterglow percentage
+  className: 'spinner', // The CSS class to assign to the spinner
+};
+
 //define map center
 var mapCenter = {lat: 47.654967,lng:-122.312668};
 
@@ -65,6 +77,9 @@ var width_modal = 0.9*window.innerWidth - margin.left - margin.right;
 
 var height_modal = 0.9*window.innerHeight - margin.top - margin.bottom - 45;
 
+//var removed to know when to remove all markers or not
+var removed = false;
+
 
 $(document).ready(function() {
 
@@ -78,7 +93,7 @@ $(document).ready(function() {
 	 		}).setView([mapCenter.lat,mapCenter.lng], zoom);
 
 	//add spinning wheel
-	map.spin(true);
+	map.spin(true, opts);
 
 	//add zoom control with your options
 	L.control.zoom({
@@ -133,10 +148,10 @@ $(document).ready(function() {
 	   });
 
 	map.on('zoomend', function onDragEnd(){
+		if (zoom_changed_fit) {zoom = map.getZoom();return;};
 		var new_zoom = map.getZoom();
 		if (new_zoom > 16) {
 			remove_all_markers();
-			//console.log("coucou");
 			showallLayer();
 			initialize_trees();
 		}
@@ -149,15 +164,31 @@ $(document).ready(function() {
 		zoom = new_zoom;
 	   });
 
-	//resize svg on resize / use of leaflet map event because conflict with d3 and jquery resize event
-	map.on('resize', function() {
+	//resize svg on resize / use of leaflet map event because conflict with d3 and jquery resize event // problems on resize
+	function resize_all(){
 		clear_map();
 		init_map();
 		resize_graphs();
+	    // Haven't resized in 100ms!
+	}
+
+	var doit;
+	map.on('resize', function(){
+	  clearTimeout(doit);
+	  doit = setTimeout(resize_all, 500);
 	});
+
+	// map.on('resize', function() {
+	// 	//redraw_map();
+	// 	clear_map();
+	// 	init_map();
+	// 	resize_graphs();
+	// });
 
 	//click event of neighborhoods
 	var previous_nhood = -1;
+	//otherwise fitbounds might trigger a zoom event
+	var zoom_changed_fit = false;
 	$('#neighborhoods').multiselect({
     		onChange: function(option, select) {
 
@@ -174,8 +205,9 @@ $(document).ready(function() {
     				var layer = featureLayer.getLayer(current_nhood);
     				layer.addTo(map);
     				limits = layer.getBounds();
+    				zoom_changed_fit = true;
 	    			map.fitBounds(limits);
-
+	    			zoom_changed_fit = false;
 	    			clear_map();
 	    			init_map();
     			}
@@ -183,7 +215,7 @@ $(document).ready(function() {
 
     		} // end of on change function
 
-    	}); //end of multiselect click event
+    }); //end of multiselect click event
 
 	function redraw_clusters() {
 
@@ -249,7 +281,7 @@ $(document).ready(function() {
 			    for (i=0;i<families.length;i++) {
 			    	//bug with the multiselect all behavior when added dynamically
 			    	//follow the conversation: https://github.com/davidstutz/bootstrap-multiselect/issues/611
-			    	family_content += '<option value="' + families[i] + '" + order="' + lookup_family[families[i]] + '">'+families[i]+'</option>';
+			    	family_content += '<option value="' + families[i] + '" order="' + lookup_family[families[i]] + '">'+families[i]+'</option>';
 			    };
 			    for (i=0;i<orders.length;i++) {
 			    	order_content += '<option value="' + orders[i] + '">'+orders[i]+'</option>';
@@ -277,6 +309,7 @@ $(document).ready(function() {
 	    	//pruneCluster = new PruneClusterForLeaflet();
 	    	pruneCluster.RemoveMarkers();
 	    	markers = [];
+	    	//size = 0;
 	    	$.getJSON( root_api + "trees/" + map.getBounds().getSouth() + "/" + map.getBounds().getNorth() + "/" + map.getBounds().getWest() + "/" + map.getBounds().getEast(), function( data ) {
 
 				//Jquery method that allows you to iterate over an array: http://api.jquery.com/jquery.each/
@@ -299,7 +332,6 @@ $(document).ready(function() {
 				pruneCluster.ProcessView();
 
 				map.spin(false);
-
 
 	    	}) // end of getJSON data
 
@@ -332,8 +364,10 @@ $(document).ready(function() {
 
 					    //Create markers with the customized icon.
 					    var marker = L.marker([v.point_y, v.point_x],{icon: treeicon});
+					    var popup = L.popup({closeButton:false})
+							    	.setContent(v.new_common_nam)
 
-						marker.bindPopup(v.new_common_nam);
+						marker.bindPopup(popup);
 						marker.on('mouseover', function (e) {
 				            this.openPopup();
 				        });
@@ -362,7 +396,6 @@ $(document).ready(function() {
 				        			last_verif = "Unknown"
 				        		}
 				        		var detail_tree = document.getElementById("detail_tree");
-				        		console.log(tree_info,tree_info.wikipedia_url);
 				        		detail_tree.innerHTML = "<ul class='list-group'><li class='list-group-item'><b>Tree id:</b> " + tree_info.unitid + "</li><li class='list-group-item'><b>Species (Scientific):</b> " + tree_info.new_scientific + "</li><li class='list-group-item'><b>Species (Common):</b> " + tree_info.new_common_nam + "</li><li class='list-group-item'><b>Genus:</b> "+ tree_info.genus + "</li><li class='list-group-item'><b>Family (Scientific):</b> " + tree_info.family + "</li><li class='list-group-item'><b>Family (Common):</b> " + tree_info.family_common + "</li><li class='list-group-item'><b>Order:</b> " + tree_info.order_plant + "</li><li class='list-group-item'><b>Plantation Date:</b> " + planted_da + "</li><li class='list-group-item'><b>Tree Diameter:</b> " + tree_info.diam + "</li><li class='list-group-item'><b>Address:</b> " + tree_info.unitdesc +"</li><li class='list-group-item'><b>Tree Height:</b> " + tree_info.treeheight + "</li><li class='list-group-item'><b>Ownership:</b> " + tree_info.ownership + "</li><li class='list-group-item'><b>Last time it has been verified:</b> " + last_verif + "</li><li class='list-group-item'><a href=' " + tree_info.wikipedia_url + "' target='_blank'><b>Website for more information</b></a>" 
 
 				        	}); // end of getjson function
@@ -400,27 +433,29 @@ $(document).ready(function() {
 	            onChange: function(option, checked, select) {
 	            	filter = option.val();
 	                if (checked) {
-	                	zoom > 15 ? showLayer(filter) : add_markers(filter);
+	                	(zoom > 16) ? showLayer(filter) : add_markers(filter);
 	                	//add_markers(filter);
 	                	$('#family-filter').multiselect('select',option.attr("family"));
 	                	$('#order-filter').multiselect('select',option.attr("order"));
 	                }
 	                else {
-	                	zoom > 15 ? removeLayer(filter) : remove_markers(filter);
+	                	(zoom > 16) ? removeLayer(filter) : remove_markers(filter);
 	                	$('#family-filter').multiselect('deselect',option.attr("family"));
 	                	$('#order-filter').multiselect('deselect',option.attr("order"));
 	                }     
 	                
 	            }, //end of onchange function
 	            onSelectAll: function() {
-	            	zoom > 15 ? showallLayer() : add_all_markers();
+	            	add_all_map();
+	            	//(zoom > 16) ? showallLayer() : add_all_markers();
 	            	$("#family-filter").multiselect("selectAll", false);
 				    $("#family-filter").multiselect("refresh");
 				    $("#order-filter").multiselect("selectAll", false);
 				    $("#order-filter").multiselect("refresh");
 	            }, //end of onselectall function
 	            onDeselectAll: function() {
-	            	zoom > 15 ? clearallLayers : remove_all_markers();
+	            	clear_map();
+	            	//zoom > 15 ? clearallLayers : remove_all_markers();
 	            	$("#family-filter").multiselect("deselectAll", false);
 				    $("#family-filter").multiselect("refresh");
 				    $("#order-filter").multiselect("deselectAll", false);
@@ -439,15 +474,15 @@ $(document).ready(function() {
 	                filter = option.val();
 	                if (checked) {
 	                	$('#genus-filter option').filter('[order="'+ filter +'"]').prop('selected', true).each(function() {
-	                		zoom > 15 ? showLayer($(this).val()) : add_markers($(this).val());
+	                		(zoom > 16) ? showLayer($(this).val()) : add_markers($(this).val());
 	                	});
 	                	$('#family-filter option').filter('[order="'+ filter +'"]').prop('selected', true);
 	                }
 	                else {
 	                	$('#genus-filter option').filter('[order="'+ filter +'"]').prop('selected', false).each(function() {
-	                		zoom > 15 ? removeLayer($(this).val()) : remove_markers($(this).val());
+	                		(zoom > 16) ? removeLayer($(this).val()) : remove_markers($(this).val());
 	                	});
-	                	$('#family-filter option').filter('[order="'+ filter +'"]').prop('selected', true);
+	                	$('#family-filter option').filter('[order="'+ filter +'"]').prop('selected', false);
 	                }
 	                $("#genus-filter").multiselect("refresh");
 	                $("#family-filter").multiselect("refresh");
@@ -457,14 +492,14 @@ $(document).ready(function() {
 				    $("#family-filter").multiselect("refresh");
 				    $("#genus-filter").multiselect("selectAll", false);
 				    $("#genus-filter").multiselect("refresh");
-				    zoom > 15 ? showallLayer() : add_all_markers();
+				    zoom > 16 ? showallLayer() : add_all_markers();
 	            }, //end of onselectall function
 	            onDeselectAll: function() {
 	            	$("#family-filter").multiselect("deselectAll", false);
 				    $("#family-filter").multiselect("refresh");
 				    $("#genus-filter").multiselect("deselectAll", false);
 				    $("#genus-filter").multiselect("refresh");
-				    zoom > 15 ? clearallLayers : remove_all_markers();
+				    zoom > 16 ? clearallLayers : remove_all_markers();
 	            } //end of onselectall function
 	        });
 
@@ -479,13 +514,13 @@ $(document).ready(function() {
 	                filter = option.val();
 	                if (checked) {
 	                	$('#genus-filter option').filter('[family="'+filter+'"]').prop('selected', true).each(function() {
-	                		zoom > 15 ? showLayer($(this).val()) : add_markers($(this).val());
+	                		zoom > 16 ? showLayer($(this).val()) : add_markers($(this).val());
 	                	});
 	                	$('#order-filter').multiselect('select',lookup_family[filter]);
 	                }
 	                else {
 	                	$('#genus-filter option').filter('[family="'+filter+'"]').prop('selected', false).each(function() {
-	                		zoom > 15 ? removeLayer($(this).val()) : remove_markers($(this).val());
+	                		zoom > 16 ? removeLayer($(this).val()) : remove_markers($(this).val());
 	                	});
 	                	$('#order-filter').multiselect('deselect',lookup_family[filter]);
 	                }
@@ -496,18 +531,23 @@ $(document).ready(function() {
 				    $("#order-filter").multiselect("refresh");
 				    $("#genus-filter").multiselect("selectAll", false);
 				    $("#genus-filter").multiselect("refresh");
-				    zoom > 15 ? showallLayer() : add_all_markers();
+				    zoom > 16 ? showallLayer() : add_all_markers();
 	            }, //end of onselectall function
 	            onDeselectAll: function() {
 	            	$("#order-filter").multiselect("deselectAll", false);
 				    $("#order-filter").multiselect("refresh");
 				    $("#genus-filter").multiselect("deselectAll", false);
 				    $("#genus-filter").multiselect("refresh");
-				    zoom > 15 ? clearallLayers : remove_all_markers();
+				    zoom > 16 ? clearallLayers : remove_all_markers();
 	            } //end of onselectall function
 	        });
 
 	    } //end of function set multiselect options
+
+	    // function redraw_map() {
+	    // 	clear_map();
+	    // 	init_map();
+	    // }
 
 	    function init_map() {
 	    	(zoom > 16) ? initialize_trees() : redraw_clusters();
@@ -522,6 +562,7 @@ $(document).ready(function() {
 	    }
 
 	    function remove_markers(filter) {
+	    	//remove size from the variables?
 	    	        for (var i = 0; i < size; ++i) {
 			            markers[i].filtered = (markers[i].filtered | markers[i].data.genus == filter) ? true : false;
 			        }
@@ -536,6 +577,7 @@ $(document).ready(function() {
 		} // end of add_makers function
 
 		function remove_all_markers() {
+			//remove size from the variables?
 			for (var i = 0; i < size; ++i) {
 			        markers[i].filtered = true;
 			}
@@ -590,28 +632,20 @@ $(document).ready(function() {
 var target_chart_genus = document.getElementById('chart_genus');
 var target_chart_date = document.getElementById('chart_date');
 
-// loader settings
-var opts = {
-  lines: 9, // The number of lines to draw
-  length: 9, // The length of each line
-  width: 5, // The line thickness
-  radius: 14, // The radius of the inner circle
-  color: '#EE3124', // #rgb or #rrggbb or array of colors
-  speed: 1.9, // Rounds per second
-  trail: 40, // Afterglow percentage
-  className: 'spinner', // The CSS class to assign to the spinner
-};
 
+
+//elem variable to draw or not draw graphs
+var elem = null;
+function draw_graphs(nhood) {
+	elem = document.getElementById('svg_genus');
+	(elem == null) ? init(nhood) : update_graphs(nhood);
+}
 
 function init(nhood) {
-
-	console.log(target_chart_genus);
 
 	// trigger loader
     var spinner_genus = new Spinner(opts).spin(target_chart_genus);
     var spinner_date = new Spinner(opts).spin(target_chart_date);
-
-    //console.log(spinner);
 
 	d3.queue()
 		.defer(d3.json, root_api + "trees/common/neighborhood/" + nhood)
@@ -619,49 +653,13 @@ function init(nhood) {
 		.awaitAll(start_graphs);
 
 	function start_graphs(error, data) {
-		//console.log(genus);
-		//console.log(date);
 		spinner_genus.stop();
 		spinner_date.stop();
 
         // code to execute within callback
         initialize_graphs(nhood,data[0],data[1]);
 	}
-
-    // load json data 
-    // d3.json(root_api + "trees/common/neighborhood/" + nhood, function(data) {
-
-    // 	//console.log()
-
-    //     // stop the loader
-    //     spinner.stop();
-
-    //     // code to execute within callback
-    //     initialize_graphs(nhood,data);
-
-    // });
-
-    // // load json data 
-    // d3.json( root_api + "trees/date/neighborhood/" + nhood, function(data) {
-
-    // 	//console.log()
-
-    //     // stop the loader
-    //     spinner.stop();
-
-    //     // code to execute within callback
-    //     initialize_graphs(nhood,data);
-
-    // });
-}
-
-function draw_graphs(nhood) {
-
-	var elem = document.getElementById('svg_genus');
-	(elem == null) ? init(nhood) : update_graphs(nhood);
-    //(elem == null) ? initialize_graphs(nhood) : update_graphs(nhood);
-
-}
+} // end of init(nhood) function
 
 function initialize_graphs(nhood, data_genus, data_date) {
 
@@ -710,24 +708,17 @@ function initialize_graphs(nhood, data_genus, data_date) {
 
 				svg_genus.call(tip);
 
-				//$.getJSON( root_api + "trees/common/neighborhood/" + nhood, function(data) {
-
-					// format the data
 					data_genus.forEach(function(d) {
-					  //data.forEach(function(d) {
 					    d.total = +d.total;
 					  });
 
 					  // Scale the range of the data in the domains
 					  x_genus.domain(data_genus.map(function(d) { return d.genus;}))
-					  //x_genus.domain(data.map(function(d) { return d.genus; }));
 					  y.domain([0, d3.max(data_genus, function(d) { return d.total;})]);
-					  //y.domain([0, d3.max(data, function(d) { return d.total; })]);
 
 					  // append the rectangles for the bar chart
 					  chart_genus.selectAll(".bar")
 					  		.data(data_genus, function(d) { return d.genus;})
-					      //.data(data, function(d) { return d.genus; })
 					    .enter().append("rect")
 					      .attr("class", "bar")
 					      .attr("x", function(d) { return x_genus(d.genus); })
@@ -789,9 +780,6 @@ function initialize_graphs(nhood, data_genus, data_date) {
 				x_date.domain(d3.extent(data_date, function(d) { return new Date(d.planted_da); }));
 				 y.domain(d3.extent(data_date, function(d) { return +d.total; }));
 
-				  // x_date.domain(d3.extent(data, function(d) { return new Date(d.planted_da); }));
-				  // y.domain(d3.extent(data, function(d) { return +d.total; }));
-
 				  //Tooltips
 				  focus = chart_date.append("g")
 				      .attr("class", "focus")
@@ -825,15 +813,6 @@ function initialize_graphs(nhood, data_genus, data_date) {
 				    focus.attr("transform", "translate(" + x_date(d.planted_da) + "," + y(d.total) + ")");
 				    focus.select("text").text(d.total);
 				  };            
-				  // function mousemove() {
-				  //   var x0 = x_date.invert(d3.mouse(this)[0]),
-				  //       i = bisectDate(data, x0, 1),
-				  //       d0 = data[i - 1],
-				  //       d1 = data[i],
-				  //       d = x0 - d0.planted_da > d1.planted_da - x0 ? d1 : d0;
-				  //   focus.attr("transform", "translate(" + x_date(d.planted_da) + "," + y(d.total) + ")");
-				  //   focus.select("text").text(d.total);
-				  // }; 
 
 				  chart_date.append("g")
 				      .attr("class", "xaxis")
@@ -861,13 +840,6 @@ function initialize_graphs(nhood, data_genus, data_date) {
 				      .datum(data_date)
 				      .attr("class", "line")
 				      .attr("d", line);
-
-				  // chart_date.append("path")
-				  //     .datum(data)
-				  //     .attr("class", "line")
-				  //     .attr("d", line);
-
-				// }); //end of getjson function
 
 	    	} // end of function draw_graph_date
 
@@ -1214,6 +1186,8 @@ function initialize_graphs(nhood, data_genus, data_date) {
 	    } // end of function update graphs
 
 	    function resize_graphs() {
+
+			if (elem == null) { return };
 
 	    	width_modal = 0.9*window.innerWidth - margin.left - margin.right;
 
