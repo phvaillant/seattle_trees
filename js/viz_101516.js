@@ -2,6 +2,8 @@ var t11 = performance.now();
 
 //define the api url to get data from
 var root_api = 'http://ec2-54-234-216-12.compute-1.amazonaws.com:5432/';
+//var root_api = 'https://pvaillant.carto.com/api/v2/sql?q=';
+
 
 //define map variable
 var map;
@@ -80,6 +82,9 @@ var height_modal = 0.9*window.innerHeight - margin.top - margin.bottom - 45;
 //var removed to know when to remove all markers or not
 var removed = false;
 
+//store the filters - genus - aiming at inversing indexes
+var filters = {};
+var filters_active = [];
 
 $(document).ready(function() {
 
@@ -258,6 +263,7 @@ $(document).ready(function() {
 			var order_container = document.getElementById("order-filter");
 
 			$.getJSON(root_api + "trees/categories", function( data ) {
+			//$.getJSON(root_api + "SELECT * FROM tree_category", function( data ) {
 
 			    $.each( data, function(key, val) {
 
@@ -272,7 +278,8 @@ $(document).ready(function() {
 			    	}
 
 					genus_content += '<option value="' + val.genus + '" family="' + val.family_common + '" order="' + val.order_plant + '">' + val.genus + '</option>';
-									 
+					filters[val.genus] = [];
+
 				 });
 
 			    families.sort();
@@ -311,6 +318,7 @@ $(document).ready(function() {
 	    	markers = [];
 	    	//size = 0;
 	    	$.getJSON( root_api + "trees/" + map.getBounds().getSouth() + "/" + map.getBounds().getNorth() + "/" + map.getBounds().getWest() + "/" + map.getBounds().getEast(), function( data ) {
+	    	//$.getJSON( root_api + "SELECT * FROM tree_filter WHERE point_x BETWEEN " map.getBounds().getSouth() + "AND " + map.getBounds().getNorth() + " AND point_y BETWEEN " + map.getBounds().getWest() + " AND " + map.getBounds().getEast(), function( data ) {
 
 				//Jquery method that allows you to iterate over an array: http://api.jquery.com/jquery.each/
 				$.each(data, function(k,v){
@@ -320,9 +328,16 @@ $(document).ready(function() {
 					marker.data.genus = v.genus;
 					marker.data.compkey = v.compkey;
 					marker.data.popup = v.genus;
-					marker.filtered = false;
+					if (filters_active.indexOf(v.genus) > -1) {
+						marker.filtered = true;
+						console.log("filtered");
+					} 
+					else {
+						marker.filtered = false;
+					}
 					pruneCluster.RegisterMarker(marker);
 					markers.push(marker);
+					filters[v.genus].push(marker);
 
 				});
 
@@ -433,12 +448,14 @@ $(document).ready(function() {
 	            onChange: function(option, checked, select) {
 	            	filter = option.val();
 	                if (checked) {
+	                	filters_active.splice(filters_active.indexOf(filter),1);
 	                	(zoom > 16) ? showLayer(filter) : add_markers(filter);
 	                	//add_markers(filter);
 	                	$('#family-filter').multiselect('select',option.attr("family"));
 	                	$('#order-filter').multiselect('select',option.attr("order"));
 	                }
 	                else {
+	                	filters_active.push(filter);
 	                	(zoom > 16) ? removeLayer(filter) : remove_markers(filter);
 	                	$('#family-filter').multiselect('deselect',option.attr("family"));
 	                	$('#order-filter').multiselect('deselect',option.attr("order"));
@@ -446,6 +463,7 @@ $(document).ready(function() {
 	                
 	            }, //end of onchange function
 	            onSelectAll: function() {
+	            	filters_active = [];
 	            	add_all_map();
 	            	//(zoom > 16) ? showallLayer() : add_all_markers();
 	            	$("#family-filter").multiselect("selectAll", false);
@@ -454,6 +472,8 @@ $(document).ready(function() {
 				    $("#order-filter").multiselect("refresh");
 	            }, //end of onselectall function
 	            onDeselectAll: function() {
+	            	filters_active = Object.keys(filters);
+	            	console.log(filters_active);
 	            	clear_map();
 	            	//zoom > 15 ? clearallLayers : remove_all_markers();
 	            	$("#family-filter").multiselect("deselectAll", false);
