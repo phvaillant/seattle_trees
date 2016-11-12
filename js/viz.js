@@ -102,8 +102,17 @@ $(document).ready(function() {
 
 	//draw the new markers when you stop dragging the map
 	map.on('dragend', function onDragEnd(){
+	//map.on('dragend', function(e) {
+		//e.stopPropagation();
 		redraw_clusters();
-	   });
+		// setTimeout(function() {
+  //       	redraw_clusters();
+  //     	}, 200);
+	});
+
+	map.on('dragstart', function onDragStart() {
+
+	})
 
 	map.on('zoomend', function onDragEnd(){
 		redraw_clusters();
@@ -251,12 +260,16 @@ $(document).ready(function() {
 				    });
 		}; //end of prepareleafletmarker function
 	 
+	    markers_compkey = {};
+	    markers = [];
 	    function initialize_clusters() {
+	    	//console.log("You dragged to: " + map.getBounds().getSouth());
 	    	var start_cluster = performance.now();
 	    	console.log('start initializing clusters');
 	    	//pruneCluster = new PruneClusterForLeaflet();
-	    	pruneCluster.RemoveMarkers();
-	    	markers = [];
+	    	//pruneCluster.RemoveMarkers();
+	    	//pruneCluster = new PruneClusterForLeaflet();
+	    	//markers = [];
 
 	    	//size = 0;
 	    	//$.getJSON( root_api + "trees/" + map.getBounds().getSouth() + "/" + map.getBounds().getNorth() + "/" + map.getBounds().getWest() + "/" + map.getBounds().getEast(), function( data ) {
@@ -266,7 +279,22 @@ $(document).ready(function() {
 				//$.each(data, function(k,v){
 				$.each(data.rows, function(k,v){
 
-					var marker = new PruneCluster.Marker(v.point_y, v.point_x);
+					var marker = markers_compkey[v.compkey];
+					//console.log(marker);
+
+					if (marker !== undefined) {
+						//console.log("already added");
+						if (filters_active.indexOf(v.genus) > -1) {
+							marker.filtered = true;
+						} 
+						else {
+							marker.filtered = false;
+						}
+						//pruneCluster.RegisterMarker(marker);;
+						return true
+					};
+
+					marker = new PruneCluster.Marker(v.point_y, v.point_x);
 					//marker.data.icon = treeicon;
 					marker.data.genus = v.genus;
 					marker.data.compkey = v.compkey;
@@ -278,21 +306,39 @@ $(document).ready(function() {
 					else {
 						marker.filtered = false;
 					}
+					markers_compkey[v.compkey]=marker;
 					pruneCluster.RegisterMarker(marker);
 					markers.push(marker);
 					filters[v.genus].push(marker);
 
 				});
 
+				//console.log("removed");
+
+				//pruneCluster.RemoveMarkers();
+
+				//size = markers.length;
+				size = markers_compkey.length;
+				// for (var i = 0; i < size; ++i) {
+			 //        pruneCluster.RegisterMarker(markers_compkey[i]);
+				// }
+				// $.each(markers_compkey, function(k,v) {
+				// 	pruneCluster.RegisterMarker(v);
+				// });
+				// console.log("added");
+				//pruneCluster.ProcessView();
+
 				map.addLayer(pruneCluster);
-				size = markers.length;
 
 				pruneCluster.ProcessView();
+				//console.log("You dragged to: " + map.getBounds().getSouth());
 
 				map.spin(false);
 				console.log('stop initializing clusters');
+
 	    		var stop_cluster = performance.now();
 	    		console.log('it took ' + (stop_cluster-start_cluster) + ' ms');
+
 
 	    	}) // end of getJSON data
 	    
