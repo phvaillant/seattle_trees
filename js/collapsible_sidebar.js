@@ -1,6 +1,6 @@
 function collapse_sidebar() {
 	$(".sidebar").toggleClass('collapsed');
-	$("#map-container").toggleClass('col-md-9 col-md-12');
+	$("#map-container").toggleClass('col-sm-9 col-sm-12');
 	map.invalidateSize(false);
 }
 

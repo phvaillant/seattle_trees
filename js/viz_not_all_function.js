@@ -37,7 +37,10 @@ var opts = {
 //define map center
 var mapCenter = {lat: 47.654967,lng:-122.312668};
 
-var your_tile = L.tileLayer('http://tile.stamen.com/watercolor/{z}/{x}/{y}.png');
+//define tile
+var your_tile = L.tileLayer('http://stamen-tiles-{s}.a.ssl.fastly.net/watercolor/{z}/{x}/{y}.{ext}', {
+	attribution: 'Map tiles by <a href="http://stamen.com">Stamen Design</a>, <a href="http://creativecommons.org/licenses/by/3.0">CC BY 3.0</a> &mdash; Map data &copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+	,ext: 'png', minZoom:12, maxZoom:17});
 
 //var removed to know when to remove all markers or not
 var removed = false;
@@ -45,12 +48,6 @@ var removed = false;
 //store the filters - genus - aiming at inversing indexes
 var filters = {};
 var filters_active = [];
-
-//for marker display of trees
-var mapLayerGroups = [];
-
-//decide when to stop clustering and show all trees
-var zoom_threshold = 16;
 
 $(document).ready(function() {
 
@@ -60,7 +57,7 @@ $(document).ready(function() {
 	//set your map and some options of the view
 	var zoom = 14
 	map = L.map('map-canvas', {
-	 		zoomControl: false, maxZoom: 18, minZoom: 11
+	 		zoomControl: false, maxZoom: 17
 	 		}).setView([mapCenter.lat,mapCenter.lng], zoom);
 
 	//add spinning wheel
@@ -97,40 +94,29 @@ $(document).ready(function() {
 	var t3 = performance.now();
 	console.log("Call to initialize_neighborhoods took " + (t3 - t2) + " milliseconds.")
 
+
 	//initialize clusters
 	var markers;
 	var pruneCluster = new PruneClusterForLeaflet();
-	initialize_clusters();
-	//$('.alert').hide();
-	//initialize_all_clusters();
+	//initialize_clusters();
+	initialize_all_clusters();
 
 	//draw the new markers when you stop dragging the map
 	map.on('dragend', function onDragEnd(){
-		if (zoom > zoom_threshold) {clearallLayers();initialize_trees()};
+	//map.on('dragend', function(e) {
+		//e.stopPropagation();
+		//redraw_clusters();
+		// setTimeout(function() {
+  //       	redraw_clusters();
+  //     	}, 200);
 	});
 
-	// map.on('dragstart', function onDragStart() {
-		
-	// })
+	map.on('dragstart', function onDragStart() {
+
+	})
 
 	map.on('zoomend', function onDragEnd(){
-		var new_zoom = map.getZoom();
-		console.log(new_zoom);
-		if (new_zoom > zoom_threshold) {
-			if (zoom <= zoom_threshold) {
-				remove_all_markers();
-				showallLayer();
-				initialize_trees();
-			}
-			else if (zoom > new_zoom) {
-				initialize_trees();
-			}
-		}
-		else if (zoom > zoom_threshold) {
-			hideallLayer();
-			initialize_clusters();
-		}
-		zoom = new_zoom;
+		//redraw_clusters();
 	   });
 
 	map.on('resize', function onDragEnd(){
@@ -235,126 +221,11 @@ $(document).ready(function() {
 				    //listeners can be applied to markers in this function
 				    leafletMarker.on('click', function(){
 				        $.getJSON( root_api + "SELECT * FROM trees_description WHERE compkey=" + data.compkey, function(data) {
+				        		console.log(data.rows);
 				        		tree_info = data.rows[0];
 				        		previous_marker.setIcon(treeicon);
 				        		previous_marker = leafletMarker;
 				        		leafletMarker.setIcon(treeicon_red);
-				        		var planted_da;
-				        		var last_verif;
-				        		if (tree_info.planted_da) {
-				        			planted_da = tree_info.planted_da.substr(0,10)
-				        		}
-				        		else {
-				        			planted_da = "Unknown"
-				        		}
-				        		if (tree_info.last_verif) {
-				        			last_verif = tree_info.last_verif.substr(0,10)
-				        		}
-				        		else {
-				        			last_verif = "Unknown"
-				        		}
-				        		// $("#tree_intro").html("glou");
-				        		$("#detail_tree").html("<li class='list-group-item'><b>Tree id:</b> " + tree_info.unitid + "</li><li class='list-group-item'><b>Species (Scientific):</b> " + tree_info.new_scientific + "</li><li class='list-group-item'><b>Species (Common):</b> " + tree_info.new_common_nam + "</li><li class='list-group-item'><b>Genus:</b> "+ tree_info.genus + "</li><li class='list-group-item'><b>Family (Scientific):</b> " + tree_info.family + "</li><li class='list-group-item'><b>Family (Common):</b> " + tree_info.family_common + "</li><li class='list-group-item'><b>Order:</b> " + tree_info.order_plant + "</li><li class='list-group-item'><b>Plantation Date:</b> " + planted_da + "</li><li class='list-group-item'><b>Tree Diameter:</b> " + tree_info.diam + "</li><li class='list-group-item'><b>Address:</b> " + tree_info.unitdesc +"</li><li class='list-group-item'><b>Tree Height:</b> " + tree_info.treeheight + "</li><li class='list-group-item'><b>Ownership:</b> " + tree_info.ownership + "</li><li class='list-group-item'><b>Last time it has been verified:</b> " + last_verif + '</li>'); 
-				        	}); // end of getjson function
-				        	if ($(".sidebar").hasClass('collapsed')) {
-				        		collapse_sidebar();
-				        	};
-				        	//show tree tab
-				        	$("#top-sidebar li").removeClass("active");
-				        	$(".tab-content div").removeClass("active");
-				        	$("#tree_top_sidebar").addClass("active");
-				        	$("#home").addClass("in active");
-				     }); // end of marker on click function
-				    leafletMarker.on('mouseover', function (e) {
-				        this.openPopup();
-				    });
-				    leafletMarker.on('mouseout', function (e) {
-				        this.closePopup();
-				    });
-		}; //end of prepareleafletmarker function
-
-	    markers = [];
-	    function initialize_clusters() {
-	    	var start_cluster = performance.now();
-	    	console.log('start initializing clusters');
-
-	    	$.getJSON( root_api + "SELECT compkey, genus, new_common_nam, point_x, point_y FROM trees2_filter", function( data ) {
-
-				//Jquery method that allows you to iterate over an array: http://api.jquery.com/jquery.each/
-				$.each(data.rows, function(k,v){
-
-					marker = new PruneCluster.Marker(v.point_y, v.point_x);
-					marker.data.genus = v.genus;
-					marker.data.compkey = v.compkey;
-					marker.data.name = v.new_common_nam;
-					pruneCluster.RegisterMarker(marker);
-					markers.push(marker);
-					filters[v.genus].push(marker);
-
-				});
-
-				size = markers.length;
-
-				map.addLayer(pruneCluster);
-
-				pruneCluster.ProcessView();
-
-				map.spin(false);
-				//progress.style.display = 'none';
-				console.log('stop initializing clusters');
-
-	    		var stop_cluster = performance.now();
-	    		console.log('it took ' + (stop_cluster-start_cluster) + ' ms');
-
-	    		//$('.alert').hide();
-	    		$(".alert").toggleClass('alert-info alert-success');
-	    		$(".alert").html("<a href='#' class='close' data-dismiss='alert' aria-label='close'>&times;</a><strong>Success! </strong> All the data has now been loaded");
-
-
-	    	}) // end of getJSON data
-	    
-	    } // end of function initialize_all_clusters
-
-	    function initialize_trees() {
-
-	    	console.log("start initialize");
-
-        	$.getJSON( root_api + "SELECT compkey, genus, new_common_nam, point_x, point_y FROM trees2_filter WHERE point_y BETWEEN " + map.getBounds().getSouth() + " AND " + map.getBounds().getNorth() + " AND point_x BETWEEN " + map.getBounds().getWest() + " AND " + map.getBounds().getEast(), function( data ) {
-
-        		//create a variable to count the total number of trees displayed in the window
-					var total_trees = 0;
-					
-					//Jquery method that allows you to iterate over an array: http://api.jquery.com/jquery.each/
-					$.each(data.rows, function(k,v){
-
-						//does layerGroup already exist? if not create it and add to map
-					    var layer = mapLayerGroups[v.genus];
-
-					    if (layer === undefined) {
-					        layer = new L.layerGroup();
-					        //add the layer to the map
-					        layer.addTo(map);
-					        //store layer
-					        mapLayerGroups[v.genus] = layer;
-					    } // end of if condition
-
-					    //Create markers with the customized icon.
-					    var marker = L.marker([v.point_y, v.point_x],{icon: treeicon});
-
-						marker.bindPopup(v.new_common_nam);
-						marker.on('mouseover', function (e) {
-				            this.openPopup();
-				        });
-				        marker.on('mouseout', function (e) {
-				            this.closePopup();
-				        });
-
-				        marker.on('click', function() {
-				        	$.getJSON( root_api + "SELECT * FROM trees_description WHERE compkey=" + v.compkey, function(data) {
-				        		tree_info = data.rows[0];
-				        		previous_marker.setIcon(treeicon);
-				        		previous_marker = marker;
-				        		marker.setIcon(treeicon_red);
 				        		var planted_da;
 				        		var last_verif;
 				        		if (tree_info.planted_da) {
@@ -381,46 +252,135 @@ $(document).ready(function() {
 				        	$(".tab-content div").removeClass("active");
 				        	$("#tree_top_sidebar").addClass("active");
 				        	$("#home").addClass("in active");
-				        }); // end of marker on click function
+				     }); // end of marker on click function
+				    leafletMarker.on('mouseover', function (e) {
+				        this.openPopup();
+				    });
+				    leafletMarker.on('mouseout', function (e) {
+				        this.closePopup();
+				    });
+		}; //end of prepareleafletmarker function
+	 
+	    markers_compkey = {};
+	    markers = [];
+	    function initialize_clusters() {
+	    	//console.log("You dragged to: " + map.getBounds().getSouth());
+	    	var start_cluster = performance.now();
+	    	console.log('start initializing clusters');
+	    	//pruneCluster = new PruneClusterForLeaflet();
+	    	//pruneCluster.RemoveMarkers();
+	    	//pruneCluster = new PruneClusterForLeaflet();
+	    	//markers = [];
 
-					    //add the feature to the layer
-					    //layer.addLayer(featureLayer); 
-					    marker.addTo(layer);
+	    	//size = 0;
+	    	//$.getJSON( root_api + "trees/" + map.getBounds().getSouth() + "/" + map.getBounds().getNorth() + "/" + map.getBounds().getWest() + "/" + map.getBounds().getEast(), function( data ) {
+	    	$.getJSON( root_api + "SELECT compkey, genus, new_common_nam, point_x, point_y FROM trees2_filter WHERE point_y BETWEEN " + map.getBounds().getSouth() + " AND " + map.getBounds().getNorth() + " AND point_x BETWEEN " + map.getBounds().getWest() + " AND " + map.getBounds().getEast(), function( data ) {
 
-						//count the number of trees
-						total_trees += 1;
+				//Jquery method that allows you to iterate over an array: http://api.jquery.com/jquery.each/
+				//$.each(data, function(k,v){
+				$.each(data.rows, function(k,v){
 
-					}); // end of the each function
+					var marker = markers_compkey[v.compkey];
+					//console.log(marker);
 
-			}); // end of the getjson function
+					if (marker !== undefined) {
+						//console.log("already added");
+						if (filters_active.indexOf(v.genus) > -1) {
+							marker.filtered = true;
+						} 
+						else {
+							marker.filtered = false;
+						}
+						//pruneCluster.RegisterMarker(marker);;
+						return true
+					};
 
-        } // end of initiqlize function
+					marker = new PruneCluster.Marker(v.point_y, v.point_x);
+					//marker.data.icon = treeicon;
+					marker.data.genus = v.genus;
+					marker.data.compkey = v.compkey;
+					//marker.data.popup = v.genus;
+					marker.data.name = v.new_common_nam;
+					if (filters_active.indexOf(v.genus) > -1) {
+						marker.filtered = true;
+					} 
+					else {
+						marker.filtered = false;
+					}
+					markers_compkey[v.compkey]=marker;
+					pruneCluster.RegisterMarker(marker);
+					markers.push(marker);
+					filters[v.genus].push(marker);
 
-        var previous_nhood = -1;
-        $('#neighborhoods').multiselect({
-    		onChange: function(option, select) {
+				});
 
-    			var current_nhood = option.val();
-    			(previous_nhood != -1) && map.removeLayer(featureLayer.getLayer(previous_nhood));
-    			if (current_nhood == -1) {
-    					//d3.select("#chart_genus")
-    					//.select("svg").remove();
-    					//d3.select("#chart_date")
-    					//.select("svg").remove();
-    			}
-    			else {
-    				//draw_graphs(current_nhood);
-    				var layer = featureLayer.getLayer(current_nhood);
-    				layer.addTo(map);
-    				limits = layer.getBounds();
-	    			map.fitBounds(limits);
+				//console.log("removed");
 
-    			}
-    			previous_nhood = current_nhood;
+				//pruneCluster.RemoveMarkers();
 
-    		} // end of on change function
+				//size = markers.length;
+				size = markers_compkey.length;
+				// for (var i = 0; i < size; ++i) {
+			 //        pruneCluster.RegisterMarker(markers_compkey[i]);
+				// }
+				// $.each(markers_compkey, function(k,v) {
+				// 	pruneCluster.RegisterMarker(v);
+				// });
+				// console.log("added");
+				//pruneCluster.ProcessView();
 
-    	}); //end of multiselect click event
+				map.addLayer(pruneCluster);
+
+				pruneCluster.ProcessView();
+				//console.log("You dragged to: " + map.getBounds().getSouth());
+
+				map.spin(false);
+				console.log('stop initializing clusters');
+
+	    		var stop_cluster = performance.now();
+	    		console.log('it took ' + (stop_cluster-start_cluster) + ' ms');
+
+
+	    	}) // end of getJSON data
+	    
+	    } // end of function initialize_clusters
+
+	    markers = [];
+	    function initialize_all_clusters() {
+	    	var start_cluster = performance.now();
+	    	console.log('start initializing clusters');
+
+	    	$.getJSON( root_api + "SELECT compkey, genus, new_common_nam, point_x, point_y FROM trees2_filter", function( data ) {
+
+				//Jquery method that allows you to iterate over an array: http://api.jquery.com/jquery.each/
+				$.each(data.rows, function(k,v){
+
+					marker = new PruneCluster.Marker(v.point_y, v.point_x);
+					marker.data.genus = v.genus;
+					marker.data.compkey = v.compkey;
+					marker.data.name = v.new_common_nam;
+					pruneCluster.RegisterMarker(marker);
+					markers.push(marker);
+					filters[v.genus].push(marker);
+
+				});
+
+				size = markers_compkey.length;
+
+				map.addLayer(pruneCluster);
+
+				pruneCluster.ProcessView();
+
+				map.spin(false);
+				console.log('stop initializing clusters');
+
+	    		var stop_cluster = performance.now();
+	    		console.log('it took ' + (stop_cluster-start_cluster) + ' ms');
+
+
+	    	}) // end of getJSON data
+	    
+	    } // end of function initialize_all_clusters
 
 	    function set_options_multiselect() {
 
@@ -434,14 +394,14 @@ $(document).ready(function() {
 	            	filter = option.val();
 	                if (checked) {
 	                	filters_active.splice(filters_active.indexOf(filter),1);
-	                	(zoom > zoom_threshold) ? showLayer(filter) : add_markers(filter);
+	                	(zoom > 16) ? showLayer(filter) : add_markers(filter);
 	                	//add_markers(filter);
 	                	$('#family-filter').multiselect('select',option.attr("family"));
 	                	$('#order-filter').multiselect('select',option.attr("order"));
 	                }
 	                else {
 	                	filters_active.push(filter);
-	                	(zoom > zoom_threshold) ? removeLayer(filter) : remove_markers(filter);
+	                	(zoom > 16) ? removeLayer(filter) : remove_markers(filter);
 	                	$('#family-filter').multiselect('deselect',option.attr("family"));
 	                	$('#order-filter').multiselect('deselect',option.attr("order"));
 	                }     
@@ -458,7 +418,7 @@ $(document).ready(function() {
 	            }, //end of onselectall function
 	            onDeselectAll: function() {
 	            	filters_active = Object.keys(filters);
-	            	zoom > zoom_threshold ? hideallLayer() : remove_all_markers();
+	            	clear_map();
 	            	//zoom > 15 ? clearallLayers : remove_all_markers();
 	            	$("#family-filter").multiselect("deselectAll", false);
 				    $("#family-filter").multiselect("refresh");
@@ -478,13 +438,13 @@ $(document).ready(function() {
 	                filter = option.val();
 	                if (checked) {
 	                	$('#genus-filter option').filter('[order="'+ filter +'"]').prop('selected', true).each(function() {
-	                		(zoom > zoom_threshold) ? showLayer($(this).val()) : add_markers($(this).val());
+	                		(zoom > 16) ? showLayer($(this).val()) : add_markers($(this).val());
 	                	});
 	                	$('#family-filter option').filter('[order="'+ filter +'"]').prop('selected', true);
 	                }
 	                else {
 	                	$('#genus-filter option').filter('[order="'+ filter +'"]').prop('selected', false).each(function() {
-	                		(zoom > zoom_threshold) ? removeLayer($(this).val()) : remove_markers($(this).val());
+	                		(zoom > 16) ? removeLayer($(this).val()) : remove_markers($(this).val());
 	                	});
 	                	$('#family-filter option').filter('[order="'+ filter +'"]').prop('selected', false);
 	                }
@@ -496,14 +456,14 @@ $(document).ready(function() {
 				    $("#family-filter").multiselect("refresh");
 				    $("#genus-filter").multiselect("selectAll", false);
 				    $("#genus-filter").multiselect("refresh");
-				    zoom > zoom_threshold ? showallLayer() : add_all_markers();
+				    zoom > 16 ? showallLayer() : add_all_markers();
 	            }, //end of onselectall function
 	            onDeselectAll: function() {
 	            	$("#family-filter").multiselect("deselectAll", false);
 				    $("#family-filter").multiselect("refresh");
 				    $("#genus-filter").multiselect("deselectAll", false);
 				    $("#genus-filter").multiselect("refresh");
-				    zoom > zoom_threshold ? hideallLayer() : remove_all_markers();
+				    zoom > 16 ? clearallLayers : remove_all_markers();
 	            } //end of onselectall function
 	        });
 
@@ -518,13 +478,13 @@ $(document).ready(function() {
 	                filter = option.val();
 	                if (checked) {
 	                	$('#genus-filter option').filter('[family="'+filter+'"]').prop('selected', true).each(function() {
-	                		zoom > zoom_threshold ? showLayer($(this).val()) : add_markers($(this).val());
+	                		zoom > 16 ? showLayer($(this).val()) : add_markers($(this).val());
 	                	});
 	                	$('#order-filter').multiselect('select',lookup_family[filter]);
 	                }
 	                else {
 	                	$('#genus-filter option').filter('[family="'+filter+'"]').prop('selected', false).each(function() {
-	                		zoom > zoom_threshold ? hideLayer($(this).val()) : remove_markers($(this).val());
+	                		zoom > 16 ? removeLayer($(this).val()) : remove_markers($(this).val());
 	                	});
 	                	$('#order-filter').multiselect('deselect',lookup_family[filter]);
 	                }
@@ -535,25 +495,25 @@ $(document).ready(function() {
 				    $("#order-filter").multiselect("refresh");
 				    $("#genus-filter").multiselect("selectAll", false);
 				    $("#genus-filter").multiselect("refresh");
-				    zoom > zoom_threshold ? showallLayer() : add_all_markers();
+				    zoom > 16 ? showallLayer() : add_all_markers();
 	            }, //end of onselectall function
 	            onDeselectAll: function() {
 	            	$("#order-filter").multiselect("deselectAll", false);
 				    $("#order-filter").multiselect("refresh");
 				    $("#genus-filter").multiselect("deselectAll", false);
 				    $("#genus-filter").multiselect("refresh");
-				    zoom > zoom_threshold ? hideallLayer() : remove_all_markers();
+				    zoom > 16 ? clearallLayers : remove_all_markers();
 	            } //end of onselectall function
 	        });
 
 	    } //end of function set multiselect options
 
 	    function clear_map() {
-	    	(zoom > zoom_threshold) ? clearallLayers() : remove_all_markers();
+	    	(zoom > 16) ? clearallLayers() : remove_all_markers();
 	    }
 
 	    function add_all_map() {
-	    	(zoom > zoom_threshold) ? showallLayer() : add_all_markers();
+	    	(zoom > 16) ? showallLayer() : add_all_markers();
 	    }
 
 	    function remove_markers(filter) {
@@ -585,42 +545,5 @@ $(document).ready(function() {
 			}
 			pruneCluster.ProcessView();
 		} // end of add all markers function
-
-		function showLayer(id) {
-		    var layer = mapLayerGroups[id];
-		    if (!(layer === undefined)) {
-		    	map.addLayer(layer); 
-		    }  
-		}
-		function hideLayer(id) {
-		    var layer = mapLayerGroups[id];
-		    if (!(layer === undefined)) {
-		    	map.removeLayer(layer); 
-		    }    
-		}
-
-		function showallLayer() {
-			console.log("show all", mapLayerGroups);
-			for (id in mapLayerGroups) {
-				var layer = mapLayerGroups[id];
-				console.log(layer);
-				map.addLayer(layer);
-			}
-		}
-
-		function hideallLayer() {
-			for (id in mapLayerGroups) {
-				var layer = mapLayerGroups[id];
-				map.removeLayer(layer);
-			}
-		}
-
-		function clearallLayers() {
-			console.log("clearing all layer");
-			for (id in mapLayerGroups) {
-				var layer = mapLayerGroups[id];
-				layer.clearLayers();
-			}
-		}
 
 });

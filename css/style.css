@@ -9,6 +9,13 @@ html, body, .container{
 	margin: 0px;
 }
 
+#data_loading{
+  z-index: 2;
+  position: absolute;
+  left: 30%;
+  width: 40%;
+}
+
 #detail_neighborhood {
 	padding-left: 10px;
 	padding-right: 10px;
