@@ -330,7 +330,6 @@ $(document).ready(function() {
 					marker.data.popup = v.genus;
 					if (filters_active.indexOf(v.genus) > -1) {
 						marker.filtered = true;
-						console.log("filtered");
 					} 
 					else {
 						marker.filtered = false;
@@ -473,7 +472,6 @@ $(document).ready(function() {
 	            }, //end of onselectall function
 	            onDeselectAll: function() {
 	            	filters_active = Object.keys(filters);
-	            	console.log(filters_active);
 	            	clear_map();
 	            	//zoom > 15 ? clearallLayers : remove_all_markers();
 	            	$("#family-filter").multiselect("deselectAll", false);

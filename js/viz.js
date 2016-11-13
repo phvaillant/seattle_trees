@@ -52,6 +52,42 @@ var mapLayerGroups = [];
 //decide when to stop clustering and show all trees
 var zoom_threshold = 16;
 
+//format for date - used later in date grpah
+var timeFormat = d3.timeFormat("%Y-%m");
+
+//store some variables for drawing, updating and resizing the graphs
+var x_genus = d3.scaleBand(),
+	x_date = d3.scaleTime(),
+	y = d3.scaleLinear(),
+	tip = d3.tip(),
+	svg_genus, chart_genus,
+	svg_date, chart_date,
+	height,
+	line = d3.line().x(function(d) { return x_date(new Date(d.planted_da)); })
+					    .y(function(d) { return y(+d.total); }),
+	//Divides date for tooltip placement
+	bisectDate = d3.bisector(function(d) { return d.planted_da; }).left,
+	focus;
+
+//store some variables for modal graphs
+var x_genus_modal = d3.scaleBand(),
+	x_date_modal = d3.scaleTime(),
+	y_modal = d3.scaleLinear(),
+	tip_modal = d3.tip(),
+	focus_modal,
+	svg_genus_modal, chart_genus_modal,
+	svg_date_modal, chart_date_modal,
+	line_modal = d3.line().x(function(d) { return x_date_modal(new Date(d.planted_da)); })
+					    .y(function(d) { return y_modal(+d.total); });
+
+//margin function for the graph
+var margin = {top: 20, right: 20, bottom: 70, left: 40};
+
+var width_modal = 0.9*window.innerWidth - margin.left - margin.right;
+
+var height_modal = 0.9*window.innerHeight - margin.top - margin.bottom - 45;
+
+
 $(document).ready(function() {
 
 	var t10 = performance.now();
@@ -101,21 +137,14 @@ $(document).ready(function() {
 	var markers;
 	var pruneCluster = new PruneClusterForLeaflet();
 	initialize_clusters();
-	//$('.alert').hide();
-	//initialize_all_clusters();
 
 	//draw the new markers when you stop dragging the map
 	map.on('dragend', function onDragEnd(){
 		if (zoom > zoom_threshold) {clearallLayers();initialize_trees()};
 	});
 
-	// map.on('dragstart', function onDragStart() {
-		
-	// })
-
 	map.on('zoomend', function onDragEnd(){
 		var new_zoom = map.getZoom();
-		console.log(new_zoom);
 		if (new_zoom > zoom_threshold) {
 			if (zoom <= zoom_threshold) {
 				remove_all_markers();
@@ -127,15 +156,27 @@ $(document).ready(function() {
 			}
 		}
 		else if (zoom > zoom_threshold) {
-			hideallLayer();
+			clearallLayers();
 			initialize_clusters();
 		}
 		zoom = new_zoom;
 	   });
 
-	map.on('resize', function onDragEnd(){
-		//redraw_clusters();
-	   });
+	//resize svg on resize / use of leaflet map event because conflict with d3 and jquery resize event // problems on resize
+	// function resize_all(){
+	// 	clear_map();
+	// 	init_map();
+	// 	resize_graphs();
+	//     // Haven't resized in 100ms!
+	// }
+
+	var doit;
+	map.on('resize', function(){
+		if (elem) {resize_graphs()};
+		if (zoom > zoom_threshold) {clearallLayers();initialize_trees()}
+	  	//clearTimeout(doit);
+	  	//doit = setTimeout(resize_graphs, 500);
+	});
 
 	function redraw_clusters() {
 		//clear_map();
@@ -152,10 +193,10 @@ $(document).ready(function() {
 		    	nhood = layer.feature.properties.nhood;
 		    	name = layer.feature.properties.name;
 		    	if (nhood == name) {
-		    		neighborhood_content += '<option value="' + layer._leaflet_id + '">'+name+'</option>';
+		    		neighborhood_content += "<option value=\"{'layer_id':'" + layer._leaflet_id + "','nhood_no':'" + layer.feature.properties.nhood_no + "'}\">"+name+"</option>";
 		    	}
 		    	else {
-		    		neighborhood_content += '<option value="' + layer._leaflet_id + '">'+name+ ' (in ' + nhood + ')</option>';
+		    		neighborhood_content += "<option value=\"{'layer_id':'" + layer._leaflet_id + "','nhood_no':'" + layer.feature.properties.nhood_no + "'}\">"+name+' (in ' + nhood + ')</option>';
 		    	};
 		    	neighborhood_container.innerHTML = neighborhood_content;
 		    	$("#neighborhoods").multiselect("rebuild");
@@ -227,6 +268,46 @@ $(document).ready(function() {
 			}); //end of getjson function
 
 	    } //end of initialize_filters function
+
+	    //change behavior of prunecluster = only change of level once change at a time
+	    pruneCluster.BuildLeafletCluster = function(cluster, position) {
+		      var m = new L.Marker(position, {
+		        icon: pruneCluster.BuildLeafletClusterIcon(cluster)
+		      });
+
+		      m.on('click', function() {
+		        // Compute the  cluster bounds (it's slow : O(n))
+		        var markersArea = pruneCluster.Cluster.FindMarkersInArea(cluster.bounds);
+		        var b = pruneCluster.Cluster.ComputeBounds(markersArea);
+
+		        if (b) {
+		          var bounds = new L.LatLngBounds(
+		            new L.LatLng(b.minLat, b.maxLng),
+		            new L.LatLng(b.maxLat, b.minLng));
+
+		          var zoomLevelBefore = pruneCluster._map.getZoom();
+		          var zoomLevelAfter = pruneCluster._map.getBoundsZoom(bounds, false, new L.Point(20, 20, null));
+
+		          // If the zoom level doesn't change
+		          if (zoomLevelAfter === zoomLevelBefore) {
+		            // Send an event for the LeafletSpiderfier
+		            pruneCluster._map.fire('overlappingmarkers', {
+		              cluster: pruneCluster,
+		              markers: markersArea,
+		              center: m.getLatLng(),
+		              marker: m
+		            });
+
+		            pruneCluster._map.setView(position, zoomLevelAfter);
+		          }
+		          else {
+		            pruneCluster._map.setView(position, zoomLevelBefore + 1);
+		          }
+		        }
+		      });
+
+		      return m;
+		}; // end of BuildLeafletCluster
 
 	    var previous_marker = new L.marker();
 	    pruneCluster.PrepareLeafletMarker = function(leafletMarker, data) {
@@ -317,8 +398,6 @@ $(document).ready(function() {
 
 	    function initialize_trees() {
 
-	    	console.log("start initialize");
-
         	$.getJSON( root_api + "SELECT compkey, genus, new_common_nam, point_x, point_y FROM trees2_filter WHERE point_y BETWEEN " + map.getBounds().getSouth() + " AND " + map.getBounds().getNorth() + " AND point_x BETWEEN " + map.getBounds().getWest() + " AND " + map.getBounds().getEast(), function( data ) {
 
         		//create a variable to count the total number of trees displayed in the window
@@ -369,8 +448,6 @@ $(document).ready(function() {
 				        		else {
 				        			last_verif = "Unknown"
 				        		}
-				        		// $("#tree_intro").html("glou");
-				        		// console.log($("#tree_intro"));
 				        		$("#detail_tree").html("<li class='list-group-item'><b>Tree id:</b> " + tree_info.unitid + "</li><li class='list-group-item'><b>Species (Scientific):</b> " + tree_info.new_scientific + "</li><li class='list-group-item'><b>Species (Common):</b> " + tree_info.new_common_nam + "</li><li class='list-group-item'><b>Genus:</b> "+ tree_info.genus + "</li><li class='list-group-item'><b>Family (Scientific):</b> " + tree_info.family + "</li><li class='list-group-item'><b>Family (Common):</b> " + tree_info.family_common + "</li><li class='list-group-item'><b>Order:</b> " + tree_info.order_plant + "</li><li class='list-group-item'><b>Plantation Date:</b> " + planted_da + "</li><li class='list-group-item'><b>Tree Diameter:</b> " + tree_info.diam + "</li><li class='list-group-item'><b>Address:</b> " + tree_info.unitdesc +"</li><li class='list-group-item'><b>Tree Height:</b> " + tree_info.treeheight + "</li><li class='list-group-item'><b>Ownership:</b> " + tree_info.ownership + "</li><li class='list-group-item'><b>Last time it has been verified:</b> " + last_verif + '</li>'); 
 				        	}); // end of getjson function
 				        	if ($(".sidebar").hasClass('collapsed')) {
@@ -401,16 +478,18 @@ $(document).ready(function() {
     		onChange: function(option, select) {
 
     			var current_nhood = option.val();
-    			(previous_nhood != -1) && map.removeLayer(featureLayer.getLayer(previous_nhood));
+    			(previous_nhood != -1) && map.removeLayer(featureLayer.getLayer(previous_nhood.layer_id));
     			if (current_nhood == -1) {
-    					//d3.select("#chart_genus")
-    					//.select("svg").remove();
-    					//d3.select("#chart_date")
-    					//.select("svg").remove();
+    					d3.select("#chart_genus")
+    					.select("svg").remove();
+    					d3.select("#chart_date")
+    					.select("svg").remove();
     			}
     			else {
-    				//draw_graphs(current_nhood);
-    				var layer = featureLayer.getLayer(current_nhood);
+    				current_nhood = current_nhood.replace(/'/g, '"');
+    				current_nhood = JSON.parse(current_nhood);
+    				draw_graphs(current_nhood.nhood_no);
+    				var layer = featureLayer.getLayer(current_nhood.layer_id);
     				layer.addTo(map);
     				limits = layer.getBounds();
 	    			map.fitBounds(limits);
@@ -441,7 +520,7 @@ $(document).ready(function() {
 	                }
 	                else {
 	                	filters_active.push(filter);
-	                	(zoom > zoom_threshold) ? removeLayer(filter) : remove_markers(filter);
+	                	(zoom > zoom_threshold) ? hideLayer(filter) : remove_markers(filter);
 	                	$('#family-filter').multiselect('deselect',option.attr("family"));
 	                	$('#order-filter').multiselect('deselect',option.attr("order"));
 	                }     
@@ -484,7 +563,7 @@ $(document).ready(function() {
 	                }
 	                else {
 	                	$('#genus-filter option').filter('[order="'+ filter +'"]').prop('selected', false).each(function() {
-	                		(zoom > zoom_threshold) ? removeLayer($(this).val()) : remove_markers($(this).val());
+	                		(zoom > zoom_threshold) ? hideLayer($(this).val()) : remove_markers($(this).val());
 	                	});
 	                	$('#family-filter option').filter('[order="'+ filter +'"]').prop('selected', false);
 	                }
@@ -600,10 +679,8 @@ $(document).ready(function() {
 		}
 
 		function showallLayer() {
-			console.log("show all", mapLayerGroups);
 			for (id in mapLayerGroups) {
 				var layer = mapLayerGroups[id];
-				console.log(layer);
 				map.addLayer(layer);
 			}
 		}
@@ -616,11 +693,706 @@ $(document).ready(function() {
 		}
 
 		function clearallLayers() {
-			console.log("clearing all layer");
 			for (id in mapLayerGroups) {
 				var layer = mapLayerGroups[id];
 				layer.clearLayers();
 			}
 		}
 
+
+///////////////////////////////////////////////////////
+////graphs functions
+
+// loader settings
+var target_chart_genus = document.getElementById('chart_genus');
+var target_chart_date = document.getElementById('chart_date');
+
+//elem variable to draw or not draw graphs
+var elem = false;
+function draw_graphs(nhood) {
+	//elem = document.getElementById('svg_genus');
+	elem ? update_graphs(nhood) : init(nhood);
+	//elem = true;
+}
+
+function init(nhood) {
+
+	elem = true;
+
+	// trigger loader
+    var spinner_genus = new Spinner(opts).spin(target_chart_genus);
+    var spinner_date = new Spinner(opts).spin(target_chart_date);
+
+    var sql_common = "SELECT genus, COUNT(compkey) AS total FROM trees2_filter a JOIN seattle_neighborhoods b ON ST_INTERSECTS(b.the_geom,ST_SetSRID(ST_POINT(point_x,point_y),4326)) AND nhood_no=" + nhood + " GROUP BY genus ORDER BY total DESC LIMIT 10;";
+    var sql_date = "SELECT date_part('epoch',date_trunc('year', planted_da))*1000 AS planted_da, COUNT(planted_da) as total FROM trees2 a JOIN seattle_neighborhoods b ON ST_INTERSECTS(b.the_geom,ST_SetSRID(ST_POINT(point_x,point_y),4326)) WHERE nhood_no=" + nhood + " AND planted_da IS NOT NULL GROUP BY date_trunc('year', planted_da) ORDER BY planted_da ASC;";
+	d3.queue()
+		.defer(d3.json, root_api + sql_common)
+		.defer(d3.json, root_api + sql_date)
+		.awaitAll(start_graphs);
+
+	function start_graphs(error, data) {
+		spinner_genus.stop();
+		spinner_date.stop();
+
+        // code to execute within callback
+        initialize_graphs(nhood,data[0].rows,data[1].rows);
+	}
+
+} // end of init(nhood) function
+
+function initialize_graphs(nhood, data_genus, data_date) {
+
+	    var width = parseInt(d3.select('#chart_genus').style('width')) - margin.left - margin.right;
+
+		height = parseInt(d3.select('#chart_genus').style('height')) - margin.top - margin.bottom;
+
+			// set the ranges
+		x_genus.range([0, width])
+				          .padding(0.1);
+
+		x_date.range([0, width]);
+
+		y.range([height, 0]);
+
+		draw_graph_genus(nhood,data_genus);
+
+		initialize_graph_genus_modal();
+
+		draw_graph_date(nhood, data_date);
+
+		initialize_graph_date_modal();
+
+		function draw_graph_genus(nhood,data_genus) {
+
+		    	svg_genus = d3.select("#chart_genus").append("svg")
+		    		.attr("id","svg_genus")
+				    .attr("width", width + margin.left + margin.right)
+				    .attr("height", height + margin.top + margin.bottom);
+			
+				svg_genus.on('click', function() {
+					update_graph_genus_modal(nhood);
+					$("#graph_modal").modal();
+				});
+
+				chart_genus = svg_genus.append("g")
+							.attr("class","chart")
+					    	.attr("transform", 
+					          "translate(" + margin.left + "," + margin.top + ")");
+
+				tip.attr('class', 'd3-tip')
+						  .offset([-10, 0])
+						  .html(function(d) {
+						    return "<strong>Number of trees:</strong> <span style='color:red'>" + d.total + "</span>";
+						  });
+
+				svg_genus.call(tip);
+
+					data_genus.forEach(function(d) {
+					    d.total = +d.total;
+					  });
+
+					  // Scale the range of the data in the domains
+					  x_genus.domain(data_genus.map(function(d) { return d.genus;}))
+					  y.domain([0, d3.max(data_genus, function(d) { return d.total;})]);
+
+					  // append the rectangles for the bar chart
+					  chart_genus.selectAll(".bar")
+					  		.data(data_genus, function(d) { return d.genus;})
+					    .enter().append("rect")
+					      .attr("class", "bar")
+					      .attr("x", function(d) { return x_genus(d.genus); })
+					      .attr("width", x_genus.bandwidth())
+					      .attr("y", function(d) { return y(d.total); })
+					      .attr("height", function(d) { return height - y(d.total); })
+		      			  .on('mouseover', function(d,i) {
+		      			  	tip.show(d,i);
+		      			  	if (zoom > zoom_threshold) {
+		      			  		previous_marker.setIcon(treeicon);
+		      			  		mapLayerGroups[d.genus].eachLayer(function(marker) {
+		      			  			marker.setIcon(treeicon_red);
+		      			  		});
+		      			  	}
+		      			  })
+		      			  .on('mouseout', function(d,i) {
+		      			  	tip.hide(d,i);
+		      			  	if (zoom > zoom_threshold) {
+		      			  		mapLayerGroups[d.genus].eachLayer(function(marker) {
+		      			  			marker.setIcon(treeicon);
+		      			  		});
+		      			  	}
+		      			  });
+
+					  // add the x Axis
+					  chart_genus.append("g")
+					  	  .attr("class","xaxis")
+					      .attr("transform", "translate(0," + height + ")")
+					      .call(d3.axisBottom(x_genus))
+					      .selectAll("text")
+						    .attr("y", 0)
+						    .attr("x", 9)
+						    .attr("dy", ".35em")
+						    .attr("transform", "rotate(90)")
+						    .style("text-anchor", "start");;
+
+					  // add the y Axis
+					  chart_genus.append("g")
+					      .attr("class","yaxis")
+					      .call(d3.axisLeft(y));
+
+				//}); //end of function getjson
+
+		} // end of function draw_graph_genus
+
+		function draw_graph_date(nhood, data_date) {
+
+				svg_date = d3.select("#chart_date").append("svg")
+				    .attr("width", width + margin.left + margin.right)
+				    .attr("height", height + margin.top + margin.bottom);
+
+				svg_date.on('click', function() {
+					update_graph_date_modal(nhood);
+					$("#graph_modal_date").modal();
+				});
+				  
+				chart_date = svg_date.append("g")
+				  	.attr("class","chart")
+				    .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+				// $.getJSON( root_api + "trees/date/neighborhood/" + nhood, function(data) {
+
+				x_date.domain(d3.extent(data_date, function(d) { return new Date(d.planted_da); }));
+				 y.domain(d3.extent(data_date, function(d) { return +d.total; }));
+
+				  //Tooltips
+				  focus = chart_date.append("g")
+				      .attr("class", "focus")
+				      .style("display", "none");
+
+				  //Adds circle to focus point on line
+				  focus.append("circle")
+				      .attr("r", 4);
+
+				  //Adds text to focus point on line    
+				  focus.append("text")
+				      .attr("x", 9)
+				      .attr("dy", ".35em");    
+				  
+				  //Creates larger area for tooltip   
+				  var overlay = chart_date.append("rect")
+				      .attr("class", "overlay")
+				      .attr("width", width)
+				      .attr("height", height)
+				      .on("mouseover", function() { focus.style("display", null); })
+				      .on("mouseout", function() { focus.style("display", "none"); })
+				      .on("mousemove", mousemove);
+				  
+				  //Tooltip mouseovers 
+				  function mousemove() {
+				    var x0 = x_date.invert(d3.mouse(this)[0]),
+				        i = bisectDate(data_date, x0, 1),
+				        d0 = data_date[i - 1],
+				        d1 = data_date[i],
+				        d = x0 - d0.planted_da > d1.planted_da - x0 ? d1 : d0;
+				    focus.attr("transform", "translate(" + x_date(d.planted_da) + "," + y(d.total) + ")");
+				    focus.select("text").text(d.total);
+				  };            
+
+				  chart_date.append("g")
+				      .attr("class", "xaxis")
+				      .attr("transform", "translate(0," + height + ")")
+				      .call(d3.axisBottom(x_date))
+				      .selectAll("text")
+						    .attr("y", 0)
+						    .attr("x", 9)
+						    .attr("dy", ".35em")
+						    .attr("transform", "rotate(90)")
+						    .style("text-anchor", "start"); ;
+
+				  chart_date.append("g")
+				      .attr("class", "yaxis")
+				      .call(d3.axisLeft(y))
+				    .append("text")
+				      .attr("class", "axis-title")
+				      .attr("transform", "rotate(-90)")
+				      .attr("y", 6)
+				      .attr("dy", ".71em")
+				      .style("text-anchor", "end")
+				      .text("Number of trees planted");
+
+				 chart_date.append("path")
+				      .datum(data_date)
+				      .attr("class", "line")
+				      .attr("d", line);
+
+	    	} // end of function draw_graph_date
+
+	    } // end of function initialize_graphs
+
+	    function initialize_graph_genus_modal() {
+
+			// set the ranges
+			x_genus_modal.range([0, width_modal])
+				          .padding(0.1);
+
+			y_modal.range([height_modal, 0]);
+
+			svg_genus_modal = d3.select("#graph_modal").select(".modal-body").append("svg")
+				    .attr("width", width_modal + margin.left + margin.right)
+				    .attr("height", height_modal + margin.top + margin.bottom);
+			
+			chart_genus_modal = svg_genus_modal.append("g")
+							.attr("class","chart")
+					    	.attr("transform", 
+					          "translate(" + margin.left + "," + margin.top + ")");
+
+			tip_modal.attr('class', 'd3-tip modal-tip')
+						  .offset([-10, 0])
+						  .html(function(d) {
+						    return "<strong>Number of trees:</strong> <span style='color:red'>" + d.total + "</span>";
+						  });
+
+			svg_genus_modal.call(tip_modal);
+
+	    } // end of function draw_graph_genus_modal
+
+	    function update_graph_genus_modal(nhood) {
+
+	    	var sql_common = "SELECT genus, COUNT(compkey) AS total FROM trees2_filter a JOIN seattle_neighborhoods b ON ST_INTERSECTS(b.the_geom,ST_SetSRID(ST_POINT(point_x,point_y),4326)) AND nhood_no=" + nhood + " GROUP BY genus ORDER BY total DESC LIMIT 10;";
+
+			$.getJSON( root_api + sql_common, function(data) {
+
+				data = data.rows;
+
+					// format the data
+					  data.forEach(function(d) {
+					    d.total = +d.total;
+					  });
+
+					  // Scale the range of the data in the domains
+					  x_genus_modal.domain(data.map(function(d) { return d.genus; }));
+					  y_modal.domain([0, d3.max(data, function(d) { return d.total; })]);
+
+					  var bar = chart_genus_modal.selectAll(".bar")
+	        			.data(data, function(d) { return d.genus; });
+
+	        		//enter new data
+	        		bar.enter().append("rect")
+					   .attr("class", "bar")
+					   .on('mouseover', function(d,i) {
+		      			  	tip_modal.show(d,i);
+		      			  })
+	      			  .on('mouseout', function(d,i) {
+	      			  	tip_modal.hide(d,i);
+	      			    })
+						   .attr("x", function(d) { return x_genus_modal(d.genus); })
+						   .attr("y", function(d) { return y_modal(d.total); })
+						   .attr("height", function(d) { return height_modal - y_modal(d.total); })
+						   .attr("width", x_genus_modal.bandwidth());
+
+	        		//remove the bars not corresponding to new genus
+	        		bar.exit().remove();
+
+	        		//update bars already present
+	        		bar.attr("x", function(d) { return x_genus_modal(d.genus); })
+								.attr("y", function(d) { return y_modal(d.total); })
+								.attr("height", function(d) { return height_modal - y_modal(d.total); })
+								.attr("width", x_genus_modal.bandwidth());
+
+					//remove preivous axes
+					chart_genus_modal.select(".yaxis").remove();
+					chart_genus_modal.select(".xaxis").remove();
+
+					//draw x axis
+					chart_genus_modal.append("g")
+					  	  .attr("class","xaxis")
+					      .attr("transform", "translate(0," + height_modal + ")")
+					      .call(d3.axisBottom(x_genus_modal))
+					      .selectAll("text")
+						    .attr("y", 0)
+						    .attr("x", 9)
+						    .attr("dy", ".35em")
+						    .attr("transform", "rotate(90)")
+						    .style("text-anchor", "start"); 
+
+					//draw y axis
+					chart_genus_modal.append("g")
+					      .attr("class","yaxis")
+					      	.call(d3.axisLeft(y_modal));
+
+			}); // end of getjson function
+
+	    } // end of update graph modal function
+
+	    function initialize_graph_date_modal() {
+
+	    	// set the ranges
+			x_date_modal.range([0, width_modal]);
+
+	    	svg_date_modal = d3.select("#graph_modal_date").select(".modal-body").append("svg")
+				    .attr("width", width_modal + margin.left + margin.right)
+				    .attr("height", height_modal + margin.top + margin.bottom);
+			
+			chart_date_modal = svg_date_modal.append("g")
+							.attr("class","chart")
+					    	.attr("transform", 
+					          "translate(" + margin.left + "," + margin.top + ")");
+
+			//Tooltips
+			focus_modal = chart_date_modal.append("g")
+				      .attr("class", "focus")
+				      .style("display", "none");
+
+			//Adds circle to focus point on line
+			focus_modal.append("circle")
+				      .attr("r", 4);
+
+			//Adds text to focus point on line    
+			focus_modal.append("text")
+				      .attr("x", 9)
+				      .attr("dy", ".35em");    
+				  
+			//Creates larger area for tooltip   
+			var overlay = chart_date_modal.append("rect")
+				      .attr("class", "overlay")
+				      .attr("width", width_modal)
+				      .attr("height", height_modal)
+				      .on("mouseover", function() { focus_modal.style("display", null); })
+				      .on("mouseout", function() { focus_modal.style("display", "none"); });
+
+			chart_date_modal.append("path")
+				      .attr("class", "line")
+
+			chart_date_modal.append("g")
+				      .attr("class", "xaxis")
+				      .attr("transform", "translate(0," + height_modal + ")")
+				      .call(d3.axisBottom(x_date_modal))
+				      .selectAll("text")
+						    .attr("y", 0)
+						    .attr("x", 9)
+						    .attr("dy", ".35em")
+						    .attr("transform", "rotate(90)")
+						    .style("text-anchor", "start"); ;
+
+			chart_date_modal.append("g")
+				      .attr("class", "yaxis")
+				      .call(d3.axisLeft(y_modal))
+				    .append("text")
+				      .attr("class", "axis-title")
+				      .attr("transform", "rotate(-90)")
+				      .attr("y", 6)
+				      .attr("dy", ".71em")
+				      .style("text-anchor", "end")
+				      .text("Number of trees planted");
+
+	    } // end of initialize graph date modal function
+
+	    function update_graph_date_modal(nhood) {
+
+	    	var sql_date = "SELECT date_part('epoch',date_trunc('year', planted_da))*1000 AS planted_da, COUNT(planted_da) as total FROM trees2 a JOIN seattle_neighborhoods b ON ST_INTERSECTS(b.the_geom,ST_SetSRID(ST_POINT(point_x,point_y),4326)) WHERE nhood_no=" + nhood + " AND planted_da IS NOT NULL GROUP BY date_trunc('year', planted_da) ORDER BY planted_da ASC;";
+
+	    	$.getJSON( root_api + sql_date, function(data) {
+
+	    			data = data.rows;
+
+					  // Scale the range of the data in the domains
+					  x_date_modal.domain(d3.extent(data, function(d) { return new Date(d.planted_da); }));
+				  	  y_modal.domain(d3.extent(data, function(d) { return +d.total; }));
+
+				  	  svg = svg_date_modal.select(".line").datum(data);
+					  svg.transition()
+					  		.duration(750).attr("d", line_modal);
+
+			          svg_date_modal.transition().select(".xaxis") // change the x axis
+			            .duration(750)
+			            .call(d3.axisBottom(x_date_modal))
+			            .selectAll("text")
+						    .attr("y", 0)
+						    .attr("x", 9)
+						    .attr("dy", ".35em")
+						    .attr("transform", "rotate(90)")
+						    .style("text-anchor", "start"); ;
+
+			          svg_date_modal.transition().select(".yaxis") // change the y axis
+			            .duration(750)
+			            .call(d3.axisLeft(y_modal));
+
+			          chart_date_modal.select(".overlay")
+			          			.on("mousemove",mousemove);
+
+			          //Tooltip mouseovers            
+					  function mousemove() {
+					    var x0 = x_date_modal.invert(d3.mouse(this)[0]),
+					        i = bisectDate(data, x0, 1),
+					        d0 = data[i - 1],
+					        d1 = data[i],
+					        d = x0 - d0.planted_da > d1.planted_da - x0 ? d1 : d0;
+					    focus_modal.attr("transform", "translate(" + x_date_modal(d.planted_da) + "," + y_modal(d.total) + ")");
+					    focus_modal.select("text").text(d.total);
+					  }; 
+
+				}); //end of getjson function
+
+	    } // end of update graph date modal function
+
+
+
+	    function update_graphs(nhood) {
+
+	    	update_graph_genus(nhood);
+
+	    	update_graph_date(nhood);
+
+	    	function update_graph_date(nhood) {
+
+	    		svg_date.on('click', function() {
+					$("#graph_modal_date").modal();
+					update_graph_date_modal(nhood);
+				});
+
+				var sql_date = "SELECT date_part('epoch',date_trunc('year', planted_da))*1000 AS planted_da, COUNT(planted_da) as total FROM trees2 a JOIN seattle_neighborhoods b ON ST_INTERSECTS(b.the_geom,ST_SetSRID(ST_POINT(point_x,point_y),4326)) WHERE nhood_no=" + nhood + " AND planted_da IS NOT NULL GROUP BY date_trunc('year', planted_da) ORDER BY planted_da ASC;";
+
+		    	 $.getJSON( root_api + sql_date, function(data) {
+
+		    	 	 data = data.rows;
+
+					  // Scale the range of the data in the domains
+					  x_date.domain(d3.extent(data, function(d) { return new Date(d.planted_da); }));
+				  	  y.domain(d3.extent(data, function(d) { return +d.total; }));
+
+				  	  svg = svg_date.select(".line").datum(data);
+					  svg.transition()
+					  		.duration(750)
+					        .attr("d", line);
+
+			          svg_date.transition().select(".xaxis") // change the x axis
+			            .duration(750)
+			            .call(d3.axisBottom(x_date))
+			            .selectAll("text")
+						    .attr("y", 0)
+						    .attr("x", 9)
+						    .attr("dy", ".35em")
+						    .attr("transform", "rotate(90)")
+						    .style("text-anchor", "start"); ;
+
+			          svg_date.transition().select(".yaxis") // change the y axis
+			            .duration(750)
+			            .call(d3.axisLeft(y));
+
+			          chart_date.select(".overlay")
+			          			.on("mousemove",mousemove);
+
+			          //Tooltip mouseovers            
+					  function mousemove() {
+					    var x0 = x_date.invert(d3.mouse(this)[0]),
+					        i = bisectDate(data, x0, 1),
+					        d0 = data[i - 1],
+					        d1 = data[i],
+					        d = x0 - d0.planted_da > d1.planted_da - x0 ? d1 : d0;
+					    focus.attr("transform", "translate(" + x_date(d.planted_da) + "," + y(d.total) + ")");
+					    focus.select("text").text(d.total);
+					  }; 
+
+				}); //end of getjson function
+
+		    } // end of function update graph date
+
+	    	function update_graph_genus(nhood) {
+
+	    		svg_genus.on('click', function() {
+					$("#graph_modal").modal();
+					update_graph_genus_modal(nhood);
+				});
+
+				var sql_common = "SELECT genus, COUNT(compkey) AS total FROM trees2_filter a JOIN seattle_neighborhoods b ON ST_INTERSECTS(b.the_geom,ST_SetSRID(ST_POINT(point_x,point_y),4326)) AND nhood_no=" + nhood + " GROUP BY genus ORDER BY total DESC LIMIT 10;";
+
+	    		$.getJSON( root_api + sql_common, function(data) {
+
+	    			data = data.rows;
+
+					// format the data
+					  data.forEach(function(d) {
+					    d.total = +d.total;
+					  });
+
+					  // Scale the range of the data in the domains
+					  x_genus.domain(data.map(function(d) { return d.genus; }));
+					  y.domain([0, d3.max(data, function(d) { return d.total; })]);
+
+					  var bar = chart_genus.selectAll(".bar")
+	        			.data(data, function(d) { return d.genus; });
+
+	        		//enter new data
+	        		bar.enter().append("rect")
+					   .attr("class", "bar")
+					   .on('mouseover', function(d,i) {
+		      			  	previous_marker.setIcon(treeicon);
+		      			  	tip.show(d,i);
+		      			  	mapLayerGroups[d.genus].eachLayer(function(marker) {
+		      			  		marker.setIcon(treeicon_red);
+		      			  	});
+		      			  })
+	      			  .on('mouseout', function(d,i) {
+	      			  	tip.hide(d,i);
+	      			  	mapLayerGroups[d.genus].eachLayer(function(marker) {
+		      			  		marker.setIcon(treeicon);
+		      			  	})
+	      			    })
+	       			   .transition()
+	       			   		.duration(750)
+						   .attr("x", function(d) { return x_genus(d.genus); })
+						   .attr("y", function(d) { return y(d.total); })
+						   .attr("height", function(d) { return height - y(d.total); })
+						   .attr("width", x_genus.bandwidth());
+
+	        		//remove the bars not corresponding to new genus
+	        		bar.exit().remove();
+
+	        		//update bars already present
+	        		bar.transition()
+	       			   		.duration(750)
+							   .attr("x", function(d) { return x_genus(d.genus); })
+								.attr("y", function(d) { return y(d.total); })
+								.attr("height", function(d) { return height - y(d.total); })
+								.attr("width", x_genus.bandwidth());
+
+					//remove preivous axes
+					chart_genus.select(".yaxis").remove();
+					chart_genus.select(".xaxis").remove();
+
+					//draw x axis
+					chart_genus.append("g")
+					  	  .attr("class","xaxis")
+					      .attr("transform", "translate(0," + height + ")")
+					      .call(d3.axisBottom(x_genus))
+					      .selectAll("text")
+						    .attr("y", 0)
+						    .attr("x", 9)
+						    .attr("dy", ".35em")
+						    .attr("transform", "rotate(90)")
+						    .style("text-anchor", "start"); 
+
+					//draw y axis
+					chart_genus.append("g")
+					      .attr("class","yaxis")
+					      .transition() // change the y axis
+				            .duration(750)
+					      	.call(d3.axisLeft(y));
+
+				}); //end of getjson function
+
+	    	} // end of update_graph_genus function
+	    	
+	    } // end of function update graphs
+
+	    function resize_graphs() {
+
+	    	width_modal = 0.9*window.innerWidth - margin.left - margin.right;
+
+	    	height_modal = 0.9*window.innerHeight - margin.top - margin.bottom - 45;
+
+	    	var width = parseInt(d3.select('#chart_genus').style('width')) - margin.left - margin.right;
+
+			height = parseInt(d3.select('#chart_genus').style('height')) - margin.top - margin.bottom;
+
+			// set the ranges
+			x_genus.range([0, width]);	
+			x_date.range([0, width]);		
+			y.range([height, 0]);
+
+			x_genus_modal.range([0, width_modal]);	
+			x_date_modal.range([0, width_modal]);		
+			y_modal.range([height_modal, 0]);
+
+			resize_graph_genus();
+			resize_graph_date();
+
+			resize_graph_genus_modal();
+			resize_graph_date_modal();
+
+			function resize_graph_genus() {
+
+				 svg_genus.attr("width", width + margin.left + margin.right)
+			    	.attr("height", height + margin.top + margin.bottom);
+
+				 chart_genus.attr("width", width + margin.left + margin.right)
+				    .attr("height", height + margin.top + margin.bottom);
+
+				 chart_genus.selectAll(".bar")
+				      .attr("x", function(d) { return x_genus(d.genus); })
+				      .attr("width", x_genus.bandwidth())
+				      .attr("y", function(d) { return y(d.total); })
+				      .attr("height", function(d) { return height - y(d.total); })
+
+				 chart_genus.select(".xaxis").attr("transform", "translate(0," + height + ")")
+				 				.call(d3.axisBottom(x_genus));
+
+				 chart_genus.select(".yaxis").call(d3.axisLeft(y));
+
+			} // end of resize graph genus function
+
+			function resize_graph_genus_modal() {
+
+				 svg_genus_modal.attr("width", width_modal + margin.left + margin.right)
+			    	.attr("height", height_modal + margin.top + margin.bottom);
+
+				 chart_genus_modal.attr("width", width_modal + margin.left + margin.right)
+				    .attr("height", height + margin.top + margin.bottom);
+
+				 chart_genus_modal.selectAll(".bar")
+				      .attr("x", function(d) { return x_genus_modal(d.genus); })
+				      .attr("width", x_genus_modal.bandwidth())
+				      .attr("y", function(d) { return y_modal(d.total); })
+				      .attr("height", function(d) { return height_modal - y_modal(d.total); })
+
+				 chart_genus_modal.select(".xaxis").attr("transform", "translate(0," + height_modal + ")")
+				 				.call(d3.axisBottom(x_genus_modal));
+
+				 chart_genus_modal.select(".yaxis").call(d3.axisLeft(y_modal));
+
+			} // end of resize graph genus function
+
+			function resize_graph_date() {
+
+				 svg_date.attr("width", width + margin.left + margin.right)
+			    	.attr("height", height + margin.top + margin.bottom);
+
+				 chart_date.attr("width", width + margin.left + margin.right)
+				    .attr("height", height + margin.top + margin.bottom);
+
+				 chart_date.select(".line")
+				      .attr("d", line);
+
+				 chart_date.select(".xaxis")
+				 	  .attr("transform", "translate(0," + height + ")")
+				      .call(d3.axisBottom(x_date));
+
+				 chart_date.select(".yaxis")
+				      .call(d3.axisLeft(y));
+
+			} // end of resize graph date function
+
+			function resize_graph_date_modal() {
+
+				 svg_date_modal.attr("width", width_modal + margin.left + margin.right)
+			    	.attr("height", height_modal + margin.top + margin.bottom);
+
+				 chart_date_modal.attr("width", width_modal + margin.left + margin.right)
+				    .attr("height", height_modal + margin.top + margin.bottom);
+
+				 chart_date_modal.select(".line")
+				      .attr("d", line_modal);
+
+				 chart_date_modal.select(".xaxis")
+				 	  .attr("transform", "translate(0," + height_modal + ")")
+				      .call(d3.axisBottom(x_date_modal));
+
+				 chart_date_modal.select(".yaxis")
+				      .call(d3.axisLeft(y_modal));
+
+			} // end of resize graph date function
+
+	    } // end of resize graphs function
+
 });
+
+
