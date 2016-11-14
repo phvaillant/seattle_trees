@@ -845,23 +845,14 @@ function initialize_graphs(nhood, data_genus, data_date) {
 
 		function draw_graph_date(nhood, data_date) {
 
-			console.log(data_date);
-			// data_date.forEach(function(data) {
-			// 	console.log(data.planted_da);
-			// 	console.log(Date(data.planted_da));
-			// });
-
 			data_date.forEach(function(d) {
 					    d.planted_da = new Date(d.planted_da);
 					  });
 
 			var data_length = data_date.length;
 			for (i = 0; i < data_length; i++) {
-				//console.log(data_date[i].planted_da);
-				//var current_date = data_date[i].planted_da;
-				var date = new Date(data_date[i].planted_da.setFullYear(data_date[i].planted_da.getFullYear() + 1));
-				//var date = (new Date(current_date)).setFullYear((new Date(current_date)).getFullYear() + 1;
-				//console.log(date);
+				var date = new Date(data_date[i].planted_da);
+				date.setFullYear(date.getFullYear() + 1);
 				while (date < data_date[i+1].planted_da) {
 				    data_date.push({'planted_da':new Date(date),'total':0});
 				    date.setFullYear(date.getFullYear() + 1);
@@ -869,26 +860,8 @@ function initialize_graphs(nhood, data_genus, data_date) {
 			};
 
 			data_date = data_date.sort(function(a,b) {
-				console.log(a.planted_da.getFullYear(),b.planted_da.getFullYear());
 		      return a.planted_da.getFullYear() - b.planted_da.getFullYear();
 		    });
-
-			console.log(data_date);
-
-			// var dateval = data_date.map(function(d) { return d.planted_da; });
-			// var minDate=new Date(Math.min.apply(null,dateval));
-			// var maxDate=new Date(Math.max.apply(null,dateval));
-			// // var minDate=Math.min.apply(null,dateval);
-			// // var maxDate=Math.max.apply(null,dateval);
-			// console.log(minDate,maxDate);
-
-			// var j = 2;
-			// for(i = minDate.getFullYear(); i <= maxDate.getFullYear(); i++) {
-			// 	if (data_date[j].planted_da.getFullYear == i) {continue}
-			// 	else {data_date.push({'planted_da':})}
-			// 	arr.push(i);
-			// }
-			// console.log(new Date(maxDate.setFullYear(maxDate.getFullYear() + 1)));
 
 				svg_date = d3.select("#chart_date").append("svg")
 				    .attr("width", width + margin.left + margin.right)
@@ -903,9 +876,6 @@ function initialize_graphs(nhood, data_genus, data_date) {
 				  	.attr("class","chart")
 				    .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 
-				// $.getJSON( root_api + "trees/date/neighborhood/" + nhood, function(data) {
-
-				//x_date.domain(d3.extent(data_date, function(d) { return new Date(d.planted_da); }));
 				x_date.domain(d3.extent(data_date, function(d) { return d.planted_da; }));
 				 y.domain(d3.extent(data_date, function(d) { return +d.total; }));
 
@@ -969,8 +939,6 @@ function initialize_graphs(nhood, data_genus, data_date) {
 				      .datum(data_date)
 				      .attr("class", "line")
 				      .attr("d", line);
-
-				 console.log(chart_date);
 
 	    	} // end of function draw_graph_date
 
@@ -1142,8 +1110,25 @@ function initialize_graphs(nhood, data_genus, data_date) {
 
 	    			data = data.rows;
 
+		    	 	 data.forEach(function(d) {
+					    d.planted_da = new Date(d.planted_da);
+					  });
+
+					var data_length = data.length;
+					for (i = 0; i < data_length; i++) {
+						var date = new Date(data[i].planted_da.setFullYear(data[i].planted_da.getFullYear() + 1));
+						while (date < data[i+1].planted_da) {
+						    data.push({'planted_da':new Date(date),'total':0});
+						    date.setFullYear(date.getFullYear() + 1);
+						}
+					};
+
+					data = data.sort(function(a,b) {
+				      return a.planted_da.getFullYear() - b.planted_da.getFullYear();
+				    });
+
 					  // Scale the range of the data in the domains
-					  x_date_modal.domain(d3.extent(data, function(d) { return new Date(d.planted_da); }));
+					  x_date_modal.domain(d3.extent(data, function(d) { return d.planted_da; }));
 				  	  y_modal.domain(d3.extent(data, function(d) { return +d.total; }));
 
 				  	  svg = svg_date_modal.select(".line").datum(data);
@@ -1203,8 +1188,26 @@ function initialize_graphs(nhood, data_genus, data_date) {
 
 		    	 	 data = data.rows;
 
+		    	 	 data.forEach(function(d) {
+					    d.planted_da = new Date(d.planted_da);
+					  });
+
+					var data_length = data.length;
+					for (i = 0; i < data_length; i++) {
+						var date = new Date(data[i].planted_da);
+						date.setFullYear(date.getFullYear() + 1);
+						while (date < data[i+1].planted_da) {
+						    data.push({'planted_da':new Date(date),'total':0});
+						    date.setFullYear(date.getFullYear() + 1);
+						}
+					};
+
+					data = data.sort(function(a,b) {
+				      return a.planted_da.getFullYear() - b.planted_da.getFullYear();
+				    });
+
 					  // Scale the range of the data in the domains
-					  x_date.domain(d3.extent(data, function(d) { return new Date(d.planted_da); }));
+					  x_date.domain(d3.extent(data, function(d) { return d.planted_da; }));
 				  	  y.domain(d3.extent(data, function(d) { return +d.total; }));
 
 				  	  svg = svg_date.select(".line").datum(data);
