@@ -43,7 +43,8 @@ var your_tile = L.tileLayer('http://tile.stamen.com/watercolor/{z}/{x}/{y}.png')
 var removed = false;
 
 //store the filters - genus - aiming at inversing indexes
-var filters = {};
+var filters = [];
+//var filters = {};
 var filters_active = [];
 
 //for marker display of trees
@@ -157,29 +158,18 @@ $(document).ready(function() {
 		}
 		else if (zoom > zoom_threshold) {
 			clearallLayers();
-			initialize_clusters();
+			add_all_markers();
 		}
 		zoom = new_zoom;
 	   });
-
-	//resize svg on resize / use of leaflet map event because conflict with d3 and jquery resize event // problems on resize
-	// function resize_all(){
-	// 	clear_map();
-	// 	init_map();
-	// 	resize_graphs();
-	//     // Haven't resized in 100ms!
-	// }
 
 	var doit;
 	map.on('resize', function(){
 		if (elem) {resize_graphs()};
 		if (zoom > zoom_threshold) {clearallLayers();initialize_trees()}
-	  	//clearTimeout(doit);
-	  	//doit = setTimeout(resize_graphs, 500);
 	});
 
 	function redraw_clusters() {
-		//clear_map();
 		map.spin(true);
 		initialize_clusters();
 
@@ -235,7 +225,7 @@ $(document).ready(function() {
 			    	}
 
 					genus_content += '<option value="' + val.genus + '" family="' + val.family_common + '" order="' + val.order_plant + '">' + val.genus + '</option>';
-					filters[val.genus] = [];
+					filters.push(val.genus);
 
 				 });
 
@@ -370,8 +360,6 @@ $(document).ready(function() {
 					marker.data.name = v.new_common_nam;
 					pruneCluster.RegisterMarker(marker);
 					markers.push(marker);
-					filters[v.genus].push(marker);
-
 				});
 
 				size = markers.length;
@@ -529,21 +517,18 @@ $(document).ready(function() {
 	            onSelectAll: function() {
 	            	filters_active = [];
 	            	add_all_map();
-	            	//(zoom > 16) ? showallLayer() : add_all_markers();
 	            	$("#family-filter").multiselect("selectAll", false);
 				    $("#family-filter").multiselect("refresh");
 				    $("#order-filter").multiselect("selectAll", false);
 				    $("#order-filter").multiselect("refresh");
 	            }, //end of onselectall function
 	            onDeselectAll: function() {
-	            	filters_active = Object.keys(filters);
+	            	filters_active = filters;
 	            	zoom > zoom_threshold ? hideallLayer() : remove_all_markers();
-	            	//zoom > 15 ? clearallLayers : remove_all_markers();
 	            	$("#family-filter").multiselect("deselectAll", false);
 				    $("#family-filter").multiselect("refresh");
 				    $("#order-filter").multiselect("deselectAll", false);
 				    $("#order-filter").multiselect("refresh");
-				    //hideallLayer();
 	            } //end of onselectall function
 	        }); // end of genus filter multiselect options
 
@@ -646,6 +631,13 @@ $(document).ready(function() {
 		function add_markers(filter) {
 	    	        for (var i = 0; i < size; ++i) {
 			            markers[i].filtered = (markers[i].filtered & markers[i].data.genus != filter) ? true : false;
+			        }
+					pruneCluster.ProcessView();
+		} // end of add_makers function
+
+		function add_all_markers() {
+	    	        for (var i = 0; i < size; ++i) {
+			            markers[i].filtered = (filters_active.indexOf(markers[i].data.genus) > -1) ? true : false;
 			        }
 					pruneCluster.ProcessView();
 		} // end of add_makers function
