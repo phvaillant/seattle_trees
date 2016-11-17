@@ -12,8 +12,9 @@ html, body, .container{
 #data_loading{
   z-index: 2;
   position: absolute;
-  left: 30%;
-  width: 40%;
+  left: 25%;
+  width: 45%;
+  text-align: center;
 }
 
 #detail_neighborhood {
