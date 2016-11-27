@@ -325,7 +325,7 @@ $(document).ready(function() {
 				        			last_verif = "Unknown"
 				        		}
 				        		// $("#tree_intro").html("glou");
-				        		$("#detail_tree").html("<li class='list-group-item'><b>Tree id:</b> " + tree_info.unitid + "</li><li class='list-group-item'><b>Species (Scientific):</b> " + tree_info.new_scientific + "</li><li class='list-group-item'><b>Species (Common):</b> " + tree_info.new_common_nam + "</li><li class='list-group-item'><b>Genus:</b> "+ tree_info.genus + "</li><li class='list-group-item'><b>Family (Scientific):</b> " + tree_info.family + "</li><li class='list-group-item'><b>Family (Common):</b> " + tree_info.family_common + "</li><li class='list-group-item'><b>Order:</b> " + tree_info.order_plant + "</li><li class='list-group-item'><b>Plantation Date:</b> " + planted_da + "</li><li class='list-group-item'><b>Tree Diameter:</b> " + tree_info.diam + "</li><li class='list-group-item'><b>Address:</b> " + tree_info.unitdesc +"</li><li class='list-group-item'><b>Tree Height:</b> " + tree_info.treeheight + "</li><li class='list-group-item'><b>Ownership:</b> " + tree_info.ownership + "</li><li class='list-group-item'><b>Last time it has been verified:</b> " + last_verif + "</li><li class='list-group-item'><a href=' " + tree_info.wikipedia_url + "' target='_blank'><b>Website for more information</b></a>"); 
+				        		$("#detail_tree").html("<li class='list-group-item'><b>Tree id:</b> " + tree_info.unitid + "</li><li class='list-group-item'><b>Species (Common):</b> " + tree_info.new_common_nam + "</li><li class='list-group-item'><b>Family (Common):</b> " + tree_info.family_common + "</li><li class='list-group-item'><b>Species (Scientific):</b> " + tree_info.new_scientific + "</li><li class='list-group-item'><b>Genus:</b> "+ tree_info.genus + "</li><li class='list-group-item'><b>Family (Scientific):</b> " + tree_info.family + "</li><li class='list-group-item'><b>Order:</b> " + tree_info.order_plant + "</li><li class='list-group-item'><b>Plantation Date:</b> " + planted_da + "</li><li class='list-group-item'><b>Tree Diameter:</b> " + tree_info.diam + "</li><li class='list-group-item'><b>Address:</b> " + tree_info.unitdesc +"</li><li class='list-group-item'><b>Tree Height:</b> " + tree_info.treeheight + "</li><li class='list-group-item'><b>Ownership:</b> " + tree_info.ownership + "</li><li class='list-group-item'><b>Last time it has been verified:</b> " + last_verif + "</li><li class='list-group-item'><a href=' " + tree_info.wikipedia_url + "' target='_blank'><b>Website for more information</b></a></li><li class='list-group-item'><a href=http://www.seattle.gov/transportation/tree_modify.htm target='_blank'><b>Form to make changes on that tree</b></a></li>"); 
 				        	}); // end of getjson function
 				        	if ($(".sidebar").hasClass('collapsed')) {
 				        		collapse_sidebar();
@@ -378,6 +378,7 @@ $(document).ready(function() {
 	    		//$('.alert').hide();
 	    		$(".alert").toggleClass('alert-info alert-success');
 	    		$(".alert").html("<a href='#' class='close' data-dismiss='alert' aria-label='close'>&times;</a><strong>Success! </strong> All the data has now been loaded");
+	    		 setTimeout(function(){ $('.alert').hide(); }, 5000);
 
 
 	    	}) // end of getJSON data
@@ -436,7 +437,7 @@ $(document).ready(function() {
 				        		else {
 				        			last_verif = "Unknown"
 				        		}
-				        		$("#detail_tree").html("<li class='list-group-item'><b>Tree id:</b> " + tree_info.unitid + "</li><li class='list-group-item'><b>Species (Scientific):</b> " + tree_info.new_scientific + "</li><li class='list-group-item'><b>Species (Common):</b> " + tree_info.new_common_nam + "</li><li class='list-group-item'><b>Genus:</b> "+ tree_info.genus + "</li><li class='list-group-item'><b>Family (Scientific):</b> " + tree_info.family + "</li><li class='list-group-item'><b>Family (Common):</b> " + tree_info.family_common + "</li><li class='list-group-item'><b>Order:</b> " + tree_info.order_plant + "</li><li class='list-group-item'><b>Plantation Date:</b> " + planted_da + "</li><li class='list-group-item'><b>Tree Diameter:</b> " + tree_info.diam + "</li><li class='list-group-item'><b>Address:</b> " + tree_info.unitdesc +"</li><li class='list-group-item'><b>Tree Height:</b> " + tree_info.treeheight + "</li><li class='list-group-item'><b>Ownership:</b> " + tree_info.ownership + "</li><li class='list-group-item'><b>Last time it has been verified:</b> " + last_verif + "</li><li class='list-group-item'><a href=' " + tree_info.wikipedia_url + "' target='_blank'><b>Website for more information</b></a>"); 
+				        		$("#detail_tree").html("<li class='list-group-item'><b>Tree id:</b> " + tree_info.unitid + "</li><li class='list-group-item'><b>Species (Common):</b> " + tree_info.new_common_nam + "</li><li class='list-group-item'><b>Family (Common):</b> " + tree_info.family_common + "</li><li class='list-group-item'><b>Species (Scientific):</b> " + tree_info.new_scientific + "</li><li class='list-group-item'><b>Genus:</b> "+ tree_info.genus + "</li><li class='list-group-item'><b>Family (Scientific):</b> " + tree_info.family + "</li><li class='list-group-item'><b>Order:</b> " + tree_info.order_plant + "</li><li class='list-group-item'><b>Plantation Date:</b> " + planted_da + "</li><li class='list-group-item'><b>Tree Diameter:</b> " + tree_info.diam + "</li><li class='list-group-item'><b>Address:</b> " + tree_info.unitdesc +"</li><li class='list-group-item'><b>Tree Height:</b> " + tree_info.treeheight + "</li><li class='list-group-item'><b>Ownership:</b> " + tree_info.ownership + "</li><li class='list-group-item'><b>Last time it has been verified:</b> " + last_verif + "</li><li class='list-group-item'><a href=' " + tree_info.wikipedia_url + "' target='_blank'><b>Website for more information</b></a></li><li class='list-group-item'><a href=http://www.seattle.gov/transportation/tree_modify.htm target='_blank'><b>Form to make changes on that tree</b></a></li>"); 
 				        	}); // end of getjson function
 				        	if ($(".sidebar").hasClass('collapsed')) {
 				        		collapse_sidebar();
@@ -831,6 +832,15 @@ function initialize_graphs(nhood, data_genus, data_date) {
 					      .attr("class","yaxis")
 					      .call(d3.axisLeft(y));
 
+					  chart_genus.append("text")
+					    .attr("class", "title_chart_genus")
+				        .attr("x", (width / 2))             
+				        .attr("y", 0 - (margin.top / 2))
+				        .attr("text-anchor", "middle")  
+				        .style("font-size", "1em") 
+				        .style("text-decoration", "bold")  
+				        .text("Number of trees per genus");
+
 				//}); //end of function getjson
 
 		} // end of function draw_graph_genus
@@ -842,7 +852,7 @@ function initialize_graphs(nhood, data_genus, data_date) {
 					  });
 
 			var data_length = data_date.length;
-			for (i = 0; i < data_length; i++) {
+			for (i = 0; i < data_length-1; i++) {
 				var date = new Date(data_date[i].planted_da);
 				date.setFullYear(date.getFullYear() + 1);
 				while (date < data_date[i+1].planted_da) {
@@ -851,9 +861,9 @@ function initialize_graphs(nhood, data_genus, data_date) {
 				}
 			};
 
-			data_date = data_date.sort(function(a,b) {
-		      return a.planted_da.getFullYear() - b.planted_da.getFullYear();
-		    });
+			// data_date = data_date.sort(function(a,b) {
+		 //      return a.planted_da.getFullYear() - b.planted_da.getFullYear();
+		 //    });
 
 				svg_date = d3.select("#chart_date").append("svg")
 				    .attr("width", width + margin.left + margin.right)
@@ -931,6 +941,15 @@ function initialize_graphs(nhood, data_genus, data_date) {
 				      .datum(data_date)
 				      .attr("class", "line")
 				      .attr("d", line);
+
+				 chart_date.append("text")
+				 		.attr("class", "title_chart_date")
+				        .attr("x", (width / 2))             
+				        .attr("y", 0 - (margin.top / 2))
+				        .attr("text-anchor", "middle")  
+				        .style("font-size", "1em") 
+				        .style("text-decoration", "bold")  
+				        .text("Number of trees per year");
 
 	    	} // end of function draw_graph_date
 
@@ -1371,6 +1390,10 @@ function initialize_graphs(nhood, data_genus, data_date) {
 
 				 chart_genus.select(".yaxis").call(d3.axisLeft(y));
 
+				 chart_genus.select(".title_chart_genus")
+				 	.attr("x", (width / 2))             
+				    .attr("y", 0 - (margin.top / 2));
+
 			} // end of resize graph genus function
 
 			function resize_graph_genus_modal() {
@@ -1411,6 +1434,10 @@ function initialize_graphs(nhood, data_genus, data_date) {
 
 				 chart_date.select(".yaxis")
 				      .call(d3.axisLeft(y));
+
+				 chart_date.select(".title_chart_genus")
+				 	.attr("x", (width / 2))             
+				    .attr("y", 0 - (margin.top / 2));
 
 			} // end of resize graph date function
 
