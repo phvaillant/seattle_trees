@@ -87,7 +87,7 @@ var margin = {top: 20, right: 20, bottom: 70, left: 40};
 var width_modal = 0.9*window.innerWidth - margin.left - margin.right;
 
 var height_modal = 0.9*window.innerHeight - margin.top - margin.bottom - 45;
-
+//console.log(height_modal);
 
 $(document).ready(function() {
 
@@ -165,6 +165,18 @@ $(document).ready(function() {
 
 	var doit;
 	map.on('resize', function(){
+
+		//resize filters
+		// width_modal = 0.9*window.innerWidth - margin.left - margin.right;
+	 //    height_modal = 0.9*window.innerHeight - margin.top - margin.bottom - 45;
+	 //    console.log(height_modal);
+	 //    $('#genus-filter').multiselect({maxHeight: height_modal});
+	 //    $('#order-filter').multiselect({maxHeight: height_modal});
+	 //    $('#family-filter').multiselect({maxHeight: height_modal});
+	 //    $('#genus-filter').multiselect('rebuild');
+		// $("#family-filter").multiselect('rebuild');
+		// $("#order-filter").multiselect('rebuild');
+
 		if (elem) {resize_graphs()};
 		if (zoom > zoom_threshold) {clearallLayers();initialize_trees()}
 	});
@@ -496,6 +508,7 @@ $(document).ready(function() {
 	            enableFiltering: true,
 	            nonSelectedText: 'No genus selected',
 	            includeSelectAllOption: true,
+	            maxHeight: height_modal,
 	            allSelectedText: 'All genus selected',
 	            filterPlaceholder: 'Search for something...',
 	            onChange: function(option, checked, select) {
@@ -537,6 +550,7 @@ $(document).ready(function() {
 	            enableFiltering: true,
 	            nonSelectedText: 'No order selected',
 	            includeSelectAllOption: true,
+	            maxHeight: height_modal,
 	            allSelectedText: 'All orders selected',
 	            filterPlaceholder: 'Search for something...',
 	            onChange: function(option, checked, select) {
@@ -577,6 +591,7 @@ $(document).ready(function() {
 	            enableFiltering: true,
 	            nonSelectedText: 'No family selected',
 	            includeSelectAllOption: true,
+	            maxHeight: height_modal,
 	            allSelectedText: 'All families selected',
 	            filterPlaceholder: 'Search for something...',
 	            onChange: function(option, checked, select) {
@@ -1348,9 +1363,15 @@ function initialize_graphs(nhood, data_genus, data_date) {
 
 	    function resize_graphs() {
 
-	    	width_modal = 0.9*window.innerWidth - margin.left - margin.right;
+	     	width_modal = 0.9*window.innerWidth - margin.left - margin.right;
 
-	    	height_modal = 0.9*window.innerHeight - margin.top - margin.bottom - 45;
+	     	height_modal = 0.9*window.innerHeight - margin.top - margin.bottom - 45;
+	  //   	$('#genus-filter').multiselect({maxHeight: height_modal});
+	  //   	$('#order-filter').multiselect({maxHeight: height_modal});
+	  //   	$('#family-filter').multiselect({maxHeight: height_modal});
+	  //   	$('#genus-filter').multiselect('rebuild');
+			// $("#family-filter").multiselect('rebuild');
+			// $("#order-filter").multiselect('rebuild');
 
 	    	var width = parseInt(d3.select('#chart_genus').style('width')) - margin.left - margin.right;
 

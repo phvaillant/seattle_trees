@@ -34,20 +34,18 @@ html, body, .container{
 	padding-right: 10px;
 }
 
-.dropdown-menu {
+/*.dropdown-menu {
 	max-height: 400px;
 	overflow-y: auto;
 	overflow-x: hidden;
-}
+}*/
 
 
 .row {
 	height: 100%;
 }
 
-.btn {
-	/*z-index: 9999;
-	position: relative;*/
+.btn-group {
 	margin: 10px;
 }
 
@@ -61,11 +59,13 @@ html, body, .container{
 }
 
 #filters-container {
-  overflow: scroll;
-	position: absolute;
+/*  overflow: scroll;
+*/	 
+  position: absolute;
 	left: 77%;
 	top: 3%;
-  height: 95%;
+  /*max-height: 95%;*/
+  /*height: 95%;*/
 }
 
 @media (min-width: 992px) {
