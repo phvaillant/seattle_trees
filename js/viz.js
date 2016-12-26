@@ -87,7 +87,6 @@ var margin = {top: 20, right: 20, bottom: 70, left: 40};
 var width_modal = 0.9*window.innerWidth - margin.left - margin.right;
 
 var height_modal = 0.9*window.innerHeight - margin.top - margin.bottom - 45;
-//console.log(height_modal);
 
 $(document).ready(function() {
 
@@ -161,6 +160,7 @@ $(document).ready(function() {
 			add_all_markers();
 		}
 		zoom = new_zoom;
+		pruneCluster.ProcessView();
 	   });
 
 	var doit;
@@ -271,6 +271,99 @@ $(document).ready(function() {
 
 	    } //end of initialize_filters function
 
+	    //change style of clusters
+	    pruneCluster.BuildLeafletClusterIcon = function(cluster) {
+		    var population = cluster.population; // the number of markers inside the cluster
+		     
+		    var c = 'prunecluster prunecluster-';
+	        var iconSize = 38;
+	        //var maxPopulation = this.Cluster.GetPopulation();
+	        var adjust = zoom - 11;
+	        if (zoom < 13) {
+	        	if (cluster.population < 2000) {
+	            	c += 'small';
+		        }
+		        else if (cluster.population < 5000) {
+		            c += 'medium';
+		            iconSize = 40;
+		        }
+		        else {
+		            c += 'large';
+		            iconSize = 44;
+		        }
+	        }
+	        else if (zoom == 13 ) {
+	        	if (cluster.population < 1000) {
+		            c += 'small';
+		        }
+		        else if (cluster.population < 3000) {
+		            c += 'medium';
+		            iconSize = 40;
+		        }
+		        else {
+		            c += 'large';
+		            iconSize = 44;
+		        }
+	        }
+	        else if (zoom == 14 ) {
+	        	if (cluster.population < 500) {
+		            c += 'small';
+		        }
+		        else if (cluster.population < 1000) {
+		            c += 'medium';
+		            iconSize = 40;
+		        }
+		        else {
+		            c += 'large';
+		            iconSize = 44;
+		        }
+	        }
+	        else if (zoom == 15 ) {
+	        	if (cluster.population < 100) {
+		            c += 'small';
+		        }
+		        else if (cluster.population < 200) {
+		            c += 'medium';
+		            iconSize = 40;
+		        }
+		        else {
+		            c += 'large';
+		            iconSize = 44;
+		        }
+	        }
+	        else if (zoom == 16) {
+	        	if (cluster.population < 50) {
+		            c += 'small';
+		        }
+		        else if (cluster.population < 100) {
+		            c += 'medium';
+		            iconSize = 40;
+		        }
+		        else {
+		            c += 'large';
+		            iconSize = 44;
+		        }
+	        }
+	        else {
+		        if (cluster.population < 20) {
+		            c += 'small';
+		        }
+		        else if (cluster.population < 50) {
+		            c += 'medium';
+		            iconSize = 40;
+		        }
+		        else {
+		            c += 'large';
+		            iconSize = 44;
+		        }
+	    	}
+	        return new L.DivIcon({
+	            html: "<div><span>" + cluster.population + "</span></div>",
+	            className: c,
+	            iconSize: L.point(iconSize, iconSize)
+	        });
+		};
+
 	    //change behavior of prunecluster = only change of level once change at a time
 	    pruneCluster.BuildLeafletCluster = function(cluster, position) {
 		      var m = new L.Marker(position, {
@@ -361,7 +454,7 @@ $(document).ready(function() {
 	    	var start_cluster = performance.now();
 	    	console.log('start initializing clusters');
 
-	    	$.getJSON( root_api + "SELECT compkey, genus, new_common_nam, point_x, point_y FROM trees2_filter", function( data ) {
+	    	$.getJSON( root_api + "SELECT compkey, genus, new_common_nam, point_x, point_y FROM trees_filters", function( data ) {
 
 				//Jquery method that allows you to iterate over an array: http://api.jquery.com/jquery.each/
 				$.each(data.rows, function(k,v){
@@ -399,7 +492,7 @@ $(document).ready(function() {
 
 	    function initialize_trees() {
 
-        	$.getJSON( root_api + "SELECT compkey, genus, new_common_nam, point_x, point_y FROM trees2_filter WHERE point_y BETWEEN " + map.getBounds().getSouth() + " AND " + map.getBounds().getNorth() + " AND point_x BETWEEN " + map.getBounds().getWest() + " AND " + map.getBounds().getEast(), function( data ) {
+        	$.getJSON( root_api + "SELECT compkey, genus, new_common_nam, point_x, point_y FROM trees_filters WHERE point_y BETWEEN " + map.getBounds().getSouth() + " AND " + map.getBounds().getNorth() + " AND point_x BETWEEN " + map.getBounds().getWest() + " AND " + map.getBounds().getEast(), function( data ) {
 
         		//create a variable to count the total number of trees displayed in the window
 					var total_trees = 0;
@@ -731,8 +824,8 @@ function init(nhood) {
     var spinner_genus = new Spinner(opts).spin(target_chart_genus);
     var spinner_date = new Spinner(opts).spin(target_chart_date);
 
-    var sql_common = "SELECT genus, COUNT(compkey) AS total FROM trees2_filter a JOIN seattle_neighborhoods b ON ST_INTERSECTS(b.the_geom,ST_SetSRID(ST_POINT(point_x,point_y),4326)) AND nhood_no=" + nhood + " GROUP BY genus ORDER BY total DESC LIMIT 10;";
-    var sql_date = "SELECT date_part('epoch',date_trunc('year', planted_da))*1000 AS planted_da, COUNT(planted_da) as total FROM trees2 a JOIN seattle_neighborhoods b ON ST_INTERSECTS(b.the_geom,ST_SetSRID(ST_POINT(point_x,point_y),4326)) WHERE nhood_no=" + nhood + " AND planted_da IS NOT NULL GROUP BY date_trunc('year', planted_da) ORDER BY planted_da ASC;";
+    var sql_common = "SELECT genus, COUNT(compkey) AS total FROM trees_filters a JOIN seattle_neighborhoods b ON ST_INTERSECTS(b.the_geom,ST_SetSRID(ST_POINT(point_x,point_y),4326)) AND nhood_no=" + nhood + " GROUP BY genus ORDER BY total DESC LIMIT 10;";
+    var sql_date = "SELECT date_part('epoch',date_trunc('year', planted_da))*1000 AS planted_da, COUNT(planted_da) as total FROM trees_all a JOIN seattle_neighborhoods b ON ST_INTERSECTS(b.the_geom,ST_SetSRID(ST_POINT(point_x,point_y),4326)) WHERE nhood_no=" + nhood + " AND planted_da IS NOT NULL GROUP BY date_trunc('year', planted_da) ORDER BY planted_da ASC;";
 	d3.queue()
 		.defer(d3.json, root_api + sql_common)
 		.defer(d3.json, root_api + sql_date)
@@ -999,7 +1092,7 @@ function initialize_graphs(nhood, data_genus, data_date) {
 
 	    function update_graph_genus_modal(nhood) {
 
-	    	var sql_common = "SELECT genus, COUNT(compkey) AS total FROM trees2_filter a JOIN seattle_neighborhoods b ON ST_INTERSECTS(b.the_geom,ST_SetSRID(ST_POINT(point_x,point_y),4326)) AND nhood_no=" + nhood + " GROUP BY genus ORDER BY total DESC LIMIT 10;";
+	    	var sql_common = "SELECT genus, COUNT(compkey) AS total FROM trees_filters a JOIN seattle_neighborhoods b ON ST_INTERSECTS(b.the_geom,ST_SetSRID(ST_POINT(point_x,point_y),4326)) AND nhood_no=" + nhood + " GROUP BY genus ORDER BY total DESC LIMIT 10;";
 
 			$.getJSON( root_api + sql_common, function(data) {
 
@@ -1130,7 +1223,7 @@ function initialize_graphs(nhood, data_genus, data_date) {
 
 	    function update_graph_date_modal(nhood) {
 
-	    	var sql_date = "SELECT date_part('epoch',date_trunc('year', planted_da))*1000 AS planted_da, COUNT(planted_da) as total FROM trees2 a JOIN seattle_neighborhoods b ON ST_INTERSECTS(b.the_geom,ST_SetSRID(ST_POINT(point_x,point_y),4326)) WHERE nhood_no=" + nhood + " AND planted_da IS NOT NULL GROUP BY date_trunc('year', planted_da) ORDER BY planted_da ASC;";
+	    	var sql_date = "SELECT date_part('epoch',date_trunc('year', planted_da))*1000 AS planted_da, COUNT(planted_da) as total FROM trees_all a JOIN seattle_neighborhoods b ON ST_INTERSECTS(b.the_geom,ST_SetSRID(ST_POINT(point_x,point_y),4326)) WHERE nhood_no=" + nhood + " AND planted_da IS NOT NULL GROUP BY date_trunc('year', planted_da) ORDER BY planted_da ASC;";
 
 	    	$.getJSON( root_api + sql_date, function(data) {
 
@@ -1208,7 +1301,7 @@ function initialize_graphs(nhood, data_genus, data_date) {
 					update_graph_date_modal(nhood);
 				});
 
-				var sql_date = "SELECT date_part('epoch',date_trunc('year', planted_da))*1000 AS planted_da, COUNT(planted_da) as total FROM trees2 a JOIN seattle_neighborhoods b ON ST_INTERSECTS(b.the_geom,ST_SetSRID(ST_POINT(point_x,point_y),4326)) WHERE nhood_no=" + nhood + " AND planted_da IS NOT NULL GROUP BY date_trunc('year', planted_da) ORDER BY planted_da ASC;";
+				var sql_date = "SELECT date_part('epoch',date_trunc('year', planted_da))*1000 AS planted_da, COUNT(planted_da) as total FROM trees_all a JOIN seattle_neighborhoods b ON ST_INTERSECTS(b.the_geom,ST_SetSRID(ST_POINT(point_x,point_y),4326)) WHERE nhood_no=" + nhood + " AND planted_da IS NOT NULL GROUP BY date_trunc('year', planted_da) ORDER BY planted_da ASC;";
 
 		    	 $.getJSON( root_api + sql_date, function(data) {
 
@@ -1280,7 +1373,7 @@ function initialize_graphs(nhood, data_genus, data_date) {
 					update_graph_genus_modal(nhood);
 				});
 
-				var sql_common = "SELECT genus, COUNT(compkey) AS total FROM trees2_filter a JOIN seattle_neighborhoods b ON ST_INTERSECTS(b.the_geom,ST_SetSRID(ST_POINT(point_x,point_y),4326)) AND nhood_no=" + nhood + " GROUP BY genus ORDER BY total DESC LIMIT 10;";
+				var sql_common = "SELECT genus, COUNT(compkey) AS total FROM trees_filters a JOIN seattle_neighborhoods b ON ST_INTERSECTS(b.the_geom,ST_SetSRID(ST_POINT(point_x,point_y),4326)) AND nhood_no=" + nhood + " GROUP BY genus ORDER BY total DESC LIMIT 10;";
 
 	    		$.getJSON( root_api + sql_common, function(data) {
 
