@@ -451,7 +451,7 @@ $(document).ready(function() {
 				    leafletMarker.setIcon(treeicon); // See http://leafletjs.com/reference.html#icon
 				    leafletMarker.bindPopup(data.name);
 				    //listeners can be applied to markers in this function
-				    leafletMarker.on('click', function(){
+				    leafletMarker.on('click', function(e){
 				        $.getJSON( root_api + "SELECT * FROM trees_description WHERE compkey=" + data.compkey, function(data) {
 				        		tree_info = data.rows[0];
 				        		previous_marker.setIcon(treeicon);
@@ -471,7 +471,10 @@ $(document).ready(function() {
 				        		else {
 				        			last_verif = "Unknown"
 				        		}
-				        		// $("#tree_intro").html("glou");
+				        		$("#tree_intro").remove();
+				        		var sv = new google.maps.StreetViewService();
+					            var myLatLng = new google.maps.LatLng(e.latlng);
+					            sv.getPanorama({location: myLatLng, radius: 50}, processSVData);
 				        		$("#detail_tree").html("<li class='list-group-item'><b>Tree id:</b> " + tree_info.unitid + "</li><li class='list-group-item'><b>Species (Common):</b> " + tree_info.new_common_nam + "</li><li class='list-group-item'><b>Family (Common):</b> " + tree_info.family_common + "</li><li class='list-group-item'><b>Species (Scientific):</b> " + tree_info.new_scientific + "</li><li class='list-group-item'><b>Genus:</b> "+ tree_info.genus + "</li><li class='list-group-item'><b>Family (Scientific):</b> " + tree_info.family + "</li><li class='list-group-item'><b>Order:</b> " + tree_info.order_plant + "</li><li class='list-group-item'><b>Plantation Date:</b> " + planted_da + "</li><li class='list-group-item'><b>Tree Diameter:</b> " + tree_info.diam + "</li><li class='list-group-item'><b>Address:</b> " + tree_info.unitdesc +"</li><li class='list-group-item'><b>Tree Height:</b> " + tree_info.treeheight + "</li><li class='list-group-item'><b>Ownership:</b> " + tree_info.ownership + "</li><li class='list-group-item'><b>Last time it has been verified:</b> " + last_verif + "</li><li class='list-group-item'><a href=' " + tree_info.wikipedia_url + "' target='_blank'><b>Website for more information</b></a></li><li class='list-group-item'><a href=http://www.seattle.gov/transportation/tree_modify.htm target='_blank'><b>Form to make changes on that tree</b></a></li>"); 
 				        	}); // end of getjson function
 				        	if ($(".sidebar").hasClass('collapsed')) {
@@ -564,7 +567,7 @@ $(document).ready(function() {
 				            this.closePopup();
 				        });
 
-				        marker.on('click', function() {
+				        marker.on('click', function(e) {
 				        	$.getJSON( root_api + "SELECT * FROM trees_description WHERE compkey=" + v.compkey, function(data) {
 				        		tree_info = data.rows[0];
 				        		previous_marker.setIcon(treeicon);
@@ -584,6 +587,10 @@ $(document).ready(function() {
 				        		else {
 				        			last_verif = "Unknown"
 				        		}
+				        		$("#tree_intro").remove();
+				        		var sv = new google.maps.StreetViewService();
+					            var myLatLng = new google.maps.LatLng(e.latlng);
+					            sv.getPanorama({location: myLatLng, radius: 50}, processSVData);
 				        		$("#detail_tree").html("<li class='list-group-item'><b>Tree id:</b> " + tree_info.unitid + "</li><li class='list-group-item'><b>Species (Common):</b> " + tree_info.new_common_nam + "</li><li class='list-group-item'><b>Family (Common):</b> " + tree_info.family_common + "</li><li class='list-group-item'><b>Species (Scientific):</b> " + tree_info.new_scientific + "</li><li class='list-group-item'><b>Genus:</b> "+ tree_info.genus + "</li><li class='list-group-item'><b>Family (Scientific):</b> " + tree_info.family + "</li><li class='list-group-item'><b>Order:</b> " + tree_info.order_plant + "</li><li class='list-group-item'><b>Plantation Date:</b> " + planted_da + "</li><li class='list-group-item'><b>Tree Diameter:</b> " + tree_info.diam + "</li><li class='list-group-item'><b>Address:</b> " + tree_info.unitdesc +"</li><li class='list-group-item'><b>Tree Height:</b> " + tree_info.treeheight + "</li><li class='list-group-item'><b>Ownership:</b> " + tree_info.ownership + "</li><li class='list-group-item'><b>Last time it has been verified:</b> " + last_verif + "</li><li class='list-group-item'><a href=' " + tree_info.wikipedia_url + "' target='_blank'><b>Website for more information</b></a></li><li class='list-group-item'><a href=http://www.seattle.gov/transportation/tree_modify.htm target='_blank'><b>Form to make changes on that tree</b></a></li>"); 
 				        	}); // end of getjson function
 				        	if ($(".sidebar").hasClass('collapsed')) {
@@ -841,6 +848,27 @@ $(document).ready(function() {
 				layer.clearLayers();
 			}
 		}
+
+//////////////////////////////////////////////////
+//////// Google street view function
+
+function processSVData(data, status) {
+
+      if (status === google.maps.StreetViewStatus.OK) {
+        var panorama;
+        panorama = new google.maps.StreetViewPanorama(document.querySelector("#panorama"));
+        panorama.setPosition(data.location.latLng);
+        panorama.setPov(({
+          heading: 265,
+          pitch: 0
+        }));
+        panorama.setOptions({panControl:false,addressControl:false,linksControl:false});
+        panorama.setEnableCloseButton(false);
+        panorama.setVisible(true);
+      } else {
+        console.error('Street View data not found for this location.');
+      }
+} // end of function processSVData
 
 
 ///////////////////////////////////////////////////////
