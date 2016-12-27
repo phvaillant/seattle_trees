@@ -8,6 +8,11 @@ html, body, .container{
     height: 200px;
 }
 
+.toggle-sidebar {
+  left: 5px;
+  top: 5px;
+}
+
 #map-container, #map-canvas, .sidebar, .panel {
 	height: 100%;
 	padding: 0px;
@@ -45,7 +50,7 @@ html, body, .container{
 }
 
 .leaflet-left {
-  top: 30px;
+  top: 35px;
   left: -5px;
 }
 
@@ -62,6 +67,17 @@ html, body, .container{
 
 .btn-group {
 	margin: 10px;
+}
+
+#filters-container button {
+  border-color: #337ab7;
+  border-width: 2px;
+  background-color: #d9edf7;
+}
+
+.inactiveLink {
+   pointer-events: none;
+   cursor: default;
 }
 
 .toggle-sidebar {
