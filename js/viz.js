@@ -1,7 +1,7 @@
 var t11 = performance.now();
 
 //define the api url to get data from
-var root_api = 'http://ec2-54-234-216-12.compute-1.amazonaws.com:5432/';
+//var root_api = 'http://ec2-54-234-216-12.compute-1.amazonaws.com:5432/';
 var root_api = 'https://pvaillant.carto.com/api/v2/sql?q=';
 
 //define map variable
@@ -94,10 +94,14 @@ $(document).ready(function() {
 	console.log("Call to load document took " + (t10 - t11) + " milliseconds.")
 
 	//set your map and some options of the view
-	var zoom = 14
+	var zoom = 14;
+	// map = L.map('map-canvas', {
+	//  		maxZoom: 18, minZoom: 11
+	//  		}).setView([mapCenter.lat,mapCenter.lng], zoom);
 	map = L.map('map-canvas', {
 	 		zoomControl: false, maxZoom: 18, minZoom: 11
 	 		}).setView([mapCenter.lat,mapCenter.lng], zoom);
+
 
 	//add spinning wheel
 	map.spin(true, opts);
@@ -109,6 +113,31 @@ $(document).ready(function() {
 
 	//add tile to your map
 	your_tile.addTo(map);
+
+	console.log(map.getBounds());
+
+	//add geocoder search box
+	map.addControl( new L.Control.Search({
+		url: 'http://nominatim.openstreetmap.org/search?format=json&q={s}&viewbox=-123,47,-121.5,48&bounded=1',
+		jsonpParam: 'json_callback',
+		propertyName: 'display_name',
+		propertyLoc: ['lat','lon'],
+		//zoom:17,
+		marker: L.circleMarker([0,0],{radius:5}),
+		autoCollapse: true,
+		autoType: false,
+		filterData: 'Seattle',
+		minLength: 2,
+		moveToLocation: function(latlng, title, map) {
+  			map.setView(latlng, 17); // access the zoom
+  			if (zoom == 17) {
+  				remove_all_markers();
+				showallLayer();
+				initialize_trees();
+  			};
+		},
+		position:'topleft'
+	}) );
 
 	var featureLayer = L.mapbox.featureLayer('js/seattle_neighborhoods.geojson');
 
@@ -140,10 +169,15 @@ $(document).ready(function() {
 
 	//draw the new markers when you stop dragging the map
 	map.on('dragend', function onDragEnd(){
-		if (zoom > zoom_threshold) {clearallLayers();initialize_trees()};
+		if (zoom > zoom_threshold) {
+			clearallLayers();
+			initialize_trees();
+		};
 	});
 
-	map.on('zoomend', function onDragEnd(){
+	map.on('zoomend', onZoomEnd);
+
+	function onZoomEnd() {
 		var new_zoom = map.getZoom();
 		if (new_zoom > zoom_threshold) {
 			if (zoom <= zoom_threshold) {
@@ -161,22 +195,19 @@ $(document).ready(function() {
 		}
 		zoom = new_zoom;
 		pruneCluster.ProcessView();
-	   });
+	} // end of function onZoomEnd;
+
+	function onSearchEnd() {
+		var new_zoom = map.getZoom();
+		if (zoom <= zoom_threshold) {
+				remove_all_markers();
+				showallLayer();
+			}
+		initialize_trees();	
+	}
 
 	var doit;
 	map.on('resize', function(){
-
-		//resize filters
-		// width_modal = 0.9*window.innerWidth - margin.left - margin.right;
-	 //    height_modal = 0.9*window.innerHeight - margin.top - margin.bottom - 45;
-	 //    console.log(height_modal);
-	 //    $('#genus-filter').multiselect({maxHeight: height_modal});
-	 //    $('#order-filter').multiselect({maxHeight: height_modal});
-	 //    $('#family-filter').multiselect({maxHeight: height_modal});
-	 //    $('#genus-filter').multiselect('rebuild');
-		// $("#family-filter").multiselect('rebuild');
-		// $("#order-filter").multiselect('rebuild');
-
 		if (elem) {resize_graphs()};
 		if (zoom > zoom_threshold) {clearallLayers();initialize_trees()}
 	});
