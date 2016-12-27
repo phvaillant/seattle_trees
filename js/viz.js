@@ -37,7 +37,18 @@ var opts = {
 //define map center
 var mapCenter = {lat: 47.654967,lng:-122.312668};
 
-var your_tile = L.tileLayer('http://tile.stamen.com/watercolor/{z}/{x}/{y}.png');
+//var your_tile = L.tileLayer('http://tile.stamen.com/watercolor/{z}/{x}/{y}.png');
+var imageworld = L.tileLayer('http://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+	attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
+}),
+    stamentonerlite   = L.tileLayer('http://stamen-tiles-{s}.a.ssl.fastly.net/toner-lite/{z}/{x}/{y}.{ext}', {
+	attribution: 'Map tiles by <a href="http://stamen.com">Stamen Design</a>, <a href="http://creativecommons.org/licenses/by/3.0">CC BY 3.0</a> &mdash; Map data &copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+	subdomains: 'abcd',
+	minZoom: 11,
+	maxZoom: 18,
+	ext: 'png'
+}),
+    watercolor = L.tileLayer('http://tile.stamen.com/watercolor/{z}/{x}/{y}.png');
 
 //var removed to know when to remove all markers or not
 var removed = false;
@@ -95,13 +106,18 @@ $(document).ready(function() {
 
 	//set your map and some options of the view
 	var zoom = 14;
-	// map = L.map('map-canvas', {
-	//  		maxZoom: 18, minZoom: 11
-	//  		}).setView([mapCenter.lat,mapCenter.lng], zoom);
 	map = L.map('map-canvas', {
-	 		zoomControl: false, maxZoom: 18, minZoom: 11
+		 		zoomControl: false, maxZoom: 18, minZoom: 11,
+		 		layers: watercolor
 	 		}).setView([mapCenter.lat,mapCenter.lng], zoom);
 
+	var baseMaps = {
+		"Watercolor": watercolor,
+	    "World Imagery": imageworld,
+	    "Stamen Toner Lite": stamentonerlite
+	};
+
+	L.control.layers(baseMaps, null, {position: 'topleft'}).addTo(map);
 
 	//add spinning wheel
 	map.spin(true, opts);
@@ -111,11 +127,6 @@ $(document).ready(function() {
 		     position:'bottomright'
 		}).addTo(map);
 
-	//add tile to your map
-	your_tile.addTo(map);
-
-	console.log(map.getBounds());
-
 	//add geocoder search box
 	map.addControl( new L.Control.Search({
 		url: 'http://nominatim.openstreetmap.org/search?format=json&q={s}&viewbox=-123,47,-121.5,48&bounded=1',
@@ -123,7 +134,7 @@ $(document).ready(function() {
 		propertyName: 'display_name',
 		propertyLoc: ['lat','lon'],
 		//zoom:17,
-		marker: L.circleMarker([0,0],{radius:5}),
+		marker: L.circleMarker([0,0],{radius:10, color:'red'}),
 		autoCollapse: true,
 		autoType: false,
 		filterData: 'Seattle',
