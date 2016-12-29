@@ -550,10 +550,12 @@ $(document).ready(function() {
 
 					    if (layer === undefined) {
 					        layer = new L.layerGroup();
-					        //add the layer to the map
-					        layer.addTo(map);
 					        //store layer
 					        mapLayerGroups[v.genus] = layer;
+					        //add the layer only if it has not been filtered yet
+					        if (filters_active.indexOf(v.genus) == -1) {
+					        	layer.addTo(map);
+					        }
 					    } // end of if condition
 
 					    //Create markers with the customized icon.
@@ -713,6 +715,7 @@ $(document).ready(function() {
 	                $("#family-filter").multiselect("refresh");
 	            }, //end of onchange function
 	            onSelectAll: function() {
+	            	filters_active = [];
 	            	$("#family-filter").multiselect("selectAll", false);
 				    $("#family-filter").multiselect("refresh");
 				    $("#genus-filter").multiselect("selectAll", false);
@@ -720,6 +723,7 @@ $(document).ready(function() {
 				    zoom > zoom_threshold ? showallLayer() : add_all_markers();
 	            }, //end of onselectall function
 	            onDeselectAll: function() {
+	            	filters_active = filters;
 	            	$("#family-filter").multiselect("deselectAll", false);
 				    $("#family-filter").multiselect("refresh");
 				    $("#genus-filter").multiselect("deselectAll", false);
@@ -753,6 +757,7 @@ $(document).ready(function() {
 	                $("#genus-filter").multiselect("refresh");
 	            }, //end of onchange function
 	            onSelectAll: function() {
+	            	filters_active = [];
 	            	$("#order-filter").multiselect("selectAll", false);
 				    $("#order-filter").multiselect("refresh");
 				    $("#genus-filter").multiselect("selectAll", false);
@@ -760,6 +765,7 @@ $(document).ready(function() {
 				    zoom > zoom_threshold ? showallLayer() : add_all_markers();
 	            }, //end of onselectall function
 	            onDeselectAll: function() {
+	            	filters_active = filters;
 	            	$("#order-filter").multiselect("deselectAll", false);
 				    $("#order-filter").multiselect("refresh");
 				    $("#genus-filter").multiselect("deselectAll", false);
@@ -795,6 +801,7 @@ $(document).ready(function() {
 
 		function add_all_markers() {
 	    	        for (var i = 0; i < size; ++i) {
+	    	        	//only add the markers that have not been filtered
 			            markers[i].filtered = (filters_active.indexOf(markers[i].data.genus) > -1) ? true : false;
 			        }
 					pruneCluster.ProcessView();
@@ -808,12 +815,12 @@ $(document).ready(function() {
 			pruneCluster.ProcessView();
 		} // end of remove all markers
 
-		function add_all_markers() {
-			for (var i = 0; i < size; ++i) {
-			        markers[i].filtered = false;
-			}
-			pruneCluster.ProcessView();
-		} // end of add all markers function
+		// function add_all_markers() {
+		// 	for (var i = 0; i < size; ++i) {
+		// 	        markers[i].filtered = false;
+		// 	}
+		// 	pruneCluster.ProcessView();
+		// } // end of add all markers function
 
 		function showLayer(id) {
 		    var layer = mapLayerGroups[id];
