@@ -452,7 +452,7 @@ $(document).ready(function() {
 				    leafletMarker.bindPopup(data.name);
 				    //listeners can be applied to markers in this function
 				    leafletMarker.on('click', function(e){
-				        $.getJSON( root_api + "SELECT * FROM trees_description WHERE compkey=" + data.compkey, function(data) {
+				        $.getJSON( root_api + "SELECT * FROM trees_descriptions WHERE compkey=" + data.compkey, function(data) {
 				        		tree_info = data.rows[0];
 				        		previous_marker.setIcon(treeicon);
 				        		previous_marker = leafletMarker;
@@ -570,8 +570,9 @@ $(document).ready(function() {
 				        });
 
 				        marker.on('click', function(e) {
-				        	$.getJSON( root_api + "SELECT * FROM trees_description WHERE compkey=" + v.compkey, function(data) {
+				        	$.getJSON( root_api + "SELECT * FROM trees_descriptions WHERE compkey=" + v.compkey, function(data) {
 				        		tree_info = data.rows[0];
+				        		console.log(tree_info);
 				        		previous_marker.setIcon(treeicon);
 				        		previous_marker = marker;
 				        		marker.setIcon(treeicon_red);
