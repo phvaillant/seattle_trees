@@ -816,13 +816,6 @@ $(document).ready(function() {
 			pruneCluster.ProcessView();
 		} // end of remove all markers
 
-		// function add_all_markers() {
-		// 	for (var i = 0; i < size; ++i) {
-		// 	        markers[i].filtered = false;
-		// 	}
-		// 	pruneCluster.ProcessView();
-		// } // end of add all markers function
-
 		function showLayer(id) {
 		    var layer = mapLayerGroups[id];
 		    if (!(layer === undefined)) {
@@ -838,8 +831,12 @@ $(document).ready(function() {
 
 		function showallLayer() {
 			for (id in mapLayerGroups) {
-				var layer = mapLayerGroups[id];
-				map.addLayer(layer);
+				if (filters_active.indexOf(id) == -1) {
+					var layer = mapLayerGroups[id];
+					layer.addTo(map);
+				}
+				// var layer = mapLayerGroups[id];
+				// map.addLayer(layer);
 			}
 		}
 
@@ -1537,12 +1534,6 @@ function initialize_graphs(nhood, data_genus, data_date) {
 	     	width_modal = 0.9*window.innerWidth - margin.left - margin.right;
 
 	     	height_modal = 0.9*window.innerHeight - margin.top - margin.bottom - 45;
-	  //   	$('#genus-filter').multiselect({maxHeight: height_modal});
-	  //   	$('#order-filter').multiselect({maxHeight: height_modal});
-	  //   	$('#family-filter').multiselect({maxHeight: height_modal});
-	  //   	$('#genus-filter').multiselect('rebuild');
-			// $("#family-filter").multiselect('rebuild');
-			// $("#order-filter").multiselect('rebuild');
 
 	    	var width = parseInt(d3.select('#chart_genus').style('width')) - margin.left - margin.right;
 
