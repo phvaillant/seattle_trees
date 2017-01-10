@@ -1044,9 +1044,9 @@ function initialize_graphs(nhood, data_genus, data_date) {
 				}
 			};
 
-			// data_date = data_date.sort(function(a,b) {
-		 //      return a.planted_da.getFullYear() - b.planted_da.getFullYear();
-		 //    });
+			data_date = data_date.sort(function(a,b) {
+		      return a.planted_da.getFullYear() - b.planted_da.getFullYear();
+		    });
 
 				svg_date = d3.select("#chart_date").append("svg")
 				    .attr("width", width + margin.left + margin.right)
