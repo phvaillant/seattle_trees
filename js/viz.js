@@ -570,6 +570,7 @@ $(document).ready(function() {
 				        });
 
 				        marker.on('click', function(e) {
+				        	$('#panorama').attr('class','');
 				        	$.getJSON( root_api + "SELECT * FROM trees_descriptions WHERE compkey=" + v.compkey, function(data) {
 				        		tree_info = data.rows[0];
 				        		console.log(tree_info);
