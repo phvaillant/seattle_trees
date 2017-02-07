@@ -195,6 +195,7 @@ $(document).ready(function() {
 				remove_all_markers();
 				showallLayer();
 				initialize_trees();
+				console.log("ok");
 			}
 			else if (zoom > new_zoom) {
 				initialize_trees();
@@ -541,6 +542,9 @@ $(document).ready(function() {
 
         		//create a variable to count the total number of trees displayed in the window
 					var total_trees = 0;
+
+					console.log(filters_active);
+					console.log(mapLayerGroups);
 					
 					//Jquery method that allows you to iterate over an array: http://api.jquery.com/jquery.each/
 					$.each(data.rows, function(k,v){
@@ -555,6 +559,7 @@ $(document).ready(function() {
 					        //add the layer only if it has not been filtered yet
 					        if (filters_active.indexOf(v.genus) == -1) {
 					        	layer.addTo(map);
+					        	console.log(v.genus);
 					        }
 					    } // end of if condition
 
@@ -703,6 +708,7 @@ $(document).ready(function() {
 	                filter = option.val();
 	                if (checked) {
 	                	$('#genus-filter option').filter('[order="'+ filter +'"]').prop('selected', true).each(function() {
+	                		filters_active.splice(filters_active.indexOf($(this).val()),1);
 	                		(zoom > zoom_threshold) ? showLayer($(this).val()) : add_markers($(this).val());
 	                	});
 	                	$('#family-filter option').filter('[order="'+ filter +'"]').prop('selected', true);
@@ -748,6 +754,7 @@ $(document).ready(function() {
 	                if (checked) {
 	                	$('#genus-filter option').filter('[family="'+filter+'"]').prop('selected', true).each(function() {
 	                		zoom > zoom_threshold ? showLayer($(this).val()) : add_markers($(this).val());
+	                		filters_active.splice(filters_active.indexOf($(this).val()),1);
 	                	});
 	                	$('#order-filter').multiselect('select',lookup_family[filter]);
 	                }
@@ -757,7 +764,6 @@ $(document).ready(function() {
 	                		filters_active.push($(this).val());
 	                	});
 	                	if ($('#genus-filter option').filter('[order="'+ lookup_family[filter] +'"]').filter(':checked').length==0) {$('#order-filter').multiselect('deselect',lookup_family[filter])};
-	                	//$('#order-filter').multiselect('deselect',lookup_family[filter]);
 	                }
 	                $("#genus-filter").multiselect("refresh");
 	            }, //end of onchange function
@@ -835,6 +841,7 @@ $(document).ready(function() {
 
 		function showallLayer() {
 			for (id in mapLayerGroups) {
+				console.log(filters_active);
 				if (filters_active.indexOf(id) == -1) {
 					var layer = mapLayerGroups[id];
 					layer.addTo(map);
