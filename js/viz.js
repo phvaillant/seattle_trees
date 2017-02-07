@@ -661,15 +661,15 @@ $(document).ready(function() {
 	                if (checked) {
 	                	filters_active.splice(filters_active.indexOf(filter),1);
 	                	(zoom > zoom_threshold) ? showLayer(filter) : add_markers(filter);
-	                	//add_markers(filter);
 	                	$('#family-filter').multiselect('select',option.attr("family"));
 	                	$('#order-filter').multiselect('select',option.attr("order"));
 	                }
 	                else {
 	                	filters_active.push(filter);
 	                	(zoom > zoom_threshold) ? hideLayer(filter) : remove_markers(filter);
-	                	$('#family-filter').multiselect('deselect',option.attr("family"));
-	                	$('#order-filter').multiselect('deselect',option.attr("order"));
+	                	//check if deselect all genus of a family
+	                	if ($('#genus-filter option').filter('[family="'+ option.attr("family") +'"]').filter(':checked').length==0) {$('#family-filter').multiselect('deselect',option.attr("family"))};
+	                	if ($('#genus-filter option').filter('[order="'+ option.attr("order") +'"]').filter(':checked').length==0) {$('#order-filter').multiselect('deselect',option.attr("order"))};
 	                }     
 	                
 	            }, //end of onchange function
@@ -709,6 +709,7 @@ $(document).ready(function() {
 	                else {
 	                	$('#genus-filter option').filter('[order="'+ filter +'"]').prop('selected', false).each(function() {
 	                		(zoom > zoom_threshold) ? hideLayer($(this).val()) : remove_markers($(this).val());
+	                		filters_active.push($(this).val());
 	                	});
 	                	$('#family-filter option').filter('[order="'+ filter +'"]').prop('selected', false);
 	                }
@@ -752,8 +753,10 @@ $(document).ready(function() {
 	                else {
 	                	$('#genus-filter option').filter('[family="'+filter+'"]').prop('selected', false).each(function() {
 	                		zoom > zoom_threshold ? hideLayer($(this).val()) : remove_markers($(this).val());
+	                		filters_active.push($(this).val());
 	                	});
-	                	$('#order-filter').multiselect('deselect',lookup_family[filter]);
+	                	if ($('#genus-filter option').filter('[order="'+ lookup_family[filter] +'"]').filter(':checked').length==0) {$('#order-filter').multiselect('deselect',lookup_family[filter])};
+	                	//$('#order-filter').multiselect('deselect',lookup_family[filter]);
 	                }
 	                $("#genus-filter").multiselect("refresh");
 	            }, //end of onchange function
