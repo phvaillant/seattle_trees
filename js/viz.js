@@ -838,8 +838,6 @@ $(document).ready(function() {
 					var layer = mapLayerGroups[id];
 					layer.addTo(map);
 				}
-				// var layer = mapLayerGroups[id];
-				// map.addLayer(layer);
 			}
 		}
 

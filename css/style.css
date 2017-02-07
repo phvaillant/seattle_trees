@@ -69,7 +69,7 @@ html, body, .container{
 	margin: 10px;
 }
 
-#filters-container button {
+.filters-container button {
   border-color: #337ab7;
   border-width: 2px;
   background-color: #d9edf7;
@@ -89,14 +89,22 @@ html, body, .container{
   z-index: 9999;
 }
 
-#filters-container {
-/*  overflow: scroll;
-*/	 
+#order-container {	 
   position: absolute;
 	left: 77%;
 	top: 3%;
-  /*max-height: 95%;*/
-  /*height: 95%;*/
+}
+
+#family-container {
+  position: absolute;
+  left: 77%;
+  top: calc(3% + 60px);
+}
+
+#genus-container {
+  position: absolute;
+  left: 77%;
+  top: calc(3% + 120px);
 }
 
 @media (min-width: 992px) {
