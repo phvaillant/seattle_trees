@@ -89,21 +89,22 @@ html, body, .container{
   z-index: 9999;
 }
 
+.filters-container {
+  left: calc(100% - 250px);
+}
+
 #order-container {	 
   position: absolute;
-	left: 77%;
 	top: 3%;
 }
 
 #family-container {
   position: absolute;
-  left: 77%;
   top: calc(3% + 60px);
 }
 
 #genus-container {
   position: absolute;
-  left: 77%;
   top: calc(3% + 120px);
 }
 

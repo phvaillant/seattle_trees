@@ -264,7 +264,7 @@ $(document).ready(function() {
 			var order_container = document.getElementById("order-filter");
 
 			//$.getJSON(root_api + "trees/categories", function( data ) {
-			$.getJSON(root_api + "SELECT * FROM tree_category_filters", function( data ) {
+			$.getJSON(root_api + "SELECT * FROM trees_category_filter", function( data ) {
 
 			    //$.each( data, function(key, val) {
 			    $.each( data.rows, function(key, val) {
@@ -453,6 +453,7 @@ $(document).ready(function() {
 				    leafletMarker.bindPopup(data.name);
 				    //listeners can be applied to markers in this function
 				    leafletMarker.on('click', function(e){
+				    	$('#panorama').attr('class','');
 				        $.getJSON( root_api + "SELECT * FROM trees_descriptions WHERE compkey=" + data.compkey, function(data) {
 				        		tree_info = data.rows[0];
 				        		previous_marker.setIcon(treeicon);
@@ -578,7 +579,6 @@ $(document).ready(function() {
 				        	$('#panorama').attr('class','');
 				        	$.getJSON( root_api + "SELECT * FROM trees_descriptions WHERE compkey=" + v.compkey, function(data) {
 				        		tree_info = data.rows[0];
-				        		console.log(tree_info);
 				        		previous_marker.setIcon(treeicon);
 				        		previous_marker = marker;
 				        		marker.setIcon(treeicon_red);
@@ -656,6 +656,7 @@ $(document).ready(function() {
 	    function set_options_multiselect() {
 
 	    	$('#genus-filter').multiselect({
+	    		buttonWidth: '200px',
 	            enableFiltering: true,
 	            nonSelectedText: 'No genus selected',
 	            includeSelectAllOption: true,
@@ -698,6 +699,7 @@ $(document).ready(function() {
 	        }); // end of genus filter multiselect options
 
 			$('#order-filter').multiselect({
+				buttonWidth: '200px',
 	            enableFiltering: true,
 	            nonSelectedText: 'No order selected',
 	            includeSelectAllOption: true,
@@ -743,6 +745,7 @@ $(document).ready(function() {
 
 			//behavior of the filter
 	        $('#family-filter').multiselect({
+	        	buttonWidth: '200px',
 	            enableFiltering: true,
 	            nonSelectedText: 'No family selected',
 	            includeSelectAllOption: true,
