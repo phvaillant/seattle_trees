@@ -12,23 +12,23 @@ var size;
 
 //define your markers: http://leafletjs.com/examples/custom-icons.html
 var treeicon = L.icon({
-    iconUrl: 'img/tree.png',
-    iconSize: new L.Point(30, 30),
+    iconUrl: 'img/tree_favicon.png',
+    iconSize: new L.Point(13, 21),
     popupAnchor: new L.Point(0, -10)
 });
 var treeicon_red = L.icon({
-    iconUrl: 'img/tree_red.png',
-    iconSize: new L.Point(30, 30),
+    iconUrl: 'img/tree_favicon_red.png',
+    iconSize: new L.Point(13, 21),
     popupAnchor: new L.Point(0, -10)
 });
 var treeicon_red_big = L.icon({
-    iconUrl: 'img/tree_red.png',
-    iconSize: new L.Point(40, 40),
+    iconUrl: 'img/tree_favicon_red.png',
+    iconSize: new L.Point(18, 27),
     popupAnchor: new L.Point(0, -10)
 });
 var treeicon_gold = L.icon({
-    iconUrl: 'img/tree_gold.png',
-    iconSize: new L.Point(40, 40),
+    iconUrl: 'img/tree_favicon_gold.png',
+    iconSize: new L.Point(18, 27),
     popupAnchor: new L.Point(0, -10)
 });
 var previous_icon = treeicon;
