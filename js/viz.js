@@ -21,6 +21,17 @@ var treeicon_red = L.icon({
     iconSize: new L.Point(30, 30),
     popupAnchor: new L.Point(0, -10)
 });
+var treeicon_red_big = L.icon({
+    iconUrl: 'img/tree_red.png',
+    iconSize: new L.Point(40, 40),
+    popupAnchor: new L.Point(0, -10)
+});
+var treeicon_gold = L.icon({
+    iconUrl: 'img/tree_gold.png',
+    iconSize: new L.Point(40, 40),
+    popupAnchor: new L.Point(0, -10)
+});
+var previous_icon = treeicon;
 
 // loader settings
 var opts = {
@@ -265,8 +276,7 @@ $(document).ready(function() {
 
 			//$.getJSON(root_api + "trees/categories", function( data ) {
 			$.getJSON(root_api + "SELECT * FROM trees_category_filter", function( data ) {
-
-			    //$.each( data, function(key, val) {
+			    
 			    $.each( data.rows, function(key, val) {
 
 			    	if (lookup_family[val.family_common] === undefined) {
@@ -449,6 +459,7 @@ $(document).ready(function() {
 
 	    var previous_marker = new L.marker();
 	    pruneCluster.PrepareLeafletMarker = function(leafletMarker, data) {
+	    			console.log(leafletMarker, data);
 				    leafletMarker.setIcon(treeicon); // See http://leafletjs.com/reference.html#icon
 				    leafletMarker.bindPopup(data.name);
 				    //listeners can be applied to markers in this function
@@ -456,9 +467,16 @@ $(document).ready(function() {
 				    	$('#panorama').attr('class','');
 				        $.getJSON( root_api + "SELECT * FROM trees_descriptions WHERE compkey=" + data.compkey, function(data) {
 				        		tree_info = data.rows[0];
-				        		previous_marker.setIcon(treeicon);
+				        		previous_marker.setIcon(previous_icon);
+				        		if (data.heritage) {
+				        			previous_icon = treeicon_gold;
+				        			leafletMarker.setIcon(treeicon_red_big);
+				        		}
+				        		else {
+				        			previous_icon = treeicon;
+				        			leafletMarker.setIcon(treeicon_red);
+				        		}
 				        		previous_marker = leafletMarker;
-				        		leafletMarker.setIcon(treeicon_red);
 				        		var planted_da;
 				        		var last_verif;
 				        		if (tree_info.planted_da) {
@@ -501,7 +519,7 @@ $(document).ready(function() {
 	    	var start_cluster = performance.now();
 	    	console.log('start initializing clusters');
 
-	    	$.getJSON( root_api + "SELECT compkey, genus, new_common_nam, point_x, point_y FROM trees_filters", function( data ) {
+	    	$.getJSON( root_api + "SELECT compkey, genus, new_common_nam, heritage, point_x, point_y FROM trees_filters", function( data ) {
 
 				//Jquery method that allows you to iterate over an array: http://api.jquery.com/jquery.each/
 				$.each(data.rows, function(k,v){
@@ -510,6 +528,7 @@ $(document).ready(function() {
 					marker.data.genus = v.genus;
 					marker.data.compkey = v.compkey;
 					marker.data.name = v.new_common_nam;
+					marker.data.heritage = v.heritage;
 					pruneCluster.RegisterMarker(marker);
 					markers.push(marker);
 				});
@@ -539,13 +558,10 @@ $(document).ready(function() {
 
 	    function initialize_trees() {
 
-        	$.getJSON( root_api + "SELECT compkey, genus, new_common_nam, point_x, point_y FROM trees_filters WHERE point_y BETWEEN " + map.getBounds().getSouth() + " AND " + map.getBounds().getNorth() + " AND point_x BETWEEN " + map.getBounds().getWest() + " AND " + map.getBounds().getEast(), function( data ) {
+        	$.getJSON( root_api + "SELECT compkey, genus, new_common_nam, heritage, point_x, point_y FROM trees_filters WHERE point_y BETWEEN " + map.getBounds().getSouth() + " AND " + map.getBounds().getNorth() + " AND point_x BETWEEN " + map.getBounds().getWest() + " AND " + map.getBounds().getEast(), function( data ) {
 
         		//create a variable to count the total number of trees displayed in the window
 					var total_trees = 0;
-
-					console.log(filters_active);
-					console.log(mapLayerGroups);
 					
 					//Jquery method that allows you to iterate over an array: http://api.jquery.com/jquery.each/
 					$.each(data.rows, function(k,v){
@@ -560,12 +576,17 @@ $(document).ready(function() {
 					        //add the layer only if it has not been filtered yet
 					        if (filters_active.indexOf(v.genus) == -1) {
 					        	layer.addTo(map);
-					        	console.log(v.genus);
 					        }
 					    } // end of if condition
 
 					    //Create markers with the customized icon.
-					    var marker = L.marker([v.point_y, v.point_x],{icon: treeicon});
+					    var marker;
+					    if (v.heritage) {
+					    	marker = L.marker([v.point_y, v.point_x],{icon: treeicon_gold, heritage: true});
+					    }
+					    else {
+					    	marker = L.marker([v.point_y, v.point_x],{icon: treeicon, heritage: false});
+					    }
 
 						marker.bindPopup(v.new_common_nam);
 						marker.on('mouseover', function (e) {
@@ -579,9 +600,16 @@ $(document).ready(function() {
 				        	$('#panorama').attr('class','');
 				        	$.getJSON( root_api + "SELECT * FROM trees_descriptions WHERE compkey=" + v.compkey, function(data) {
 				        		tree_info = data.rows[0];
-				        		previous_marker.setIcon(treeicon);
+				        		previous_marker.setIcon(previous_icon);
+				        		if (v.heritage) {
+				        			previous_icon = treeicon_gold;
+				        			marker.setIcon(treeicon_red_big);
+				        		}
+				        		else {
+				        			previous_icon = treeicon;
+				        			marker.setIcon(treeicon_red);
+				        		}
 				        		previous_marker = marker;
-				        		marker.setIcon(treeicon_red);
 				        		var planted_da;
 				        		var last_verif;
 				        		if (tree_info.planted_da) {
@@ -997,7 +1025,7 @@ function initialize_graphs(nhood, data_genus, data_date) {
 		      			  	if (zoom > zoom_threshold) {
 		      			  		previous_marker.setIcon(treeicon);
 		      			  		mapLayerGroups[d.genus].eachLayer(function(marker) {
-		      			  			marker.setIcon(treeicon_red);
+		      			  			marker.options.heritage ? marker.setIcon(treeicon_red_big) : marker.setIcon(treeicon_red);
 		      			  		});
 		      			  	}
 		      			  })
@@ -1005,7 +1033,7 @@ function initialize_graphs(nhood, data_genus, data_date) {
 		      			  	tip.hide(d,i);
 		      			  	if (zoom > zoom_threshold) {
 		      			  		mapLayerGroups[d.genus].eachLayer(function(marker) {
-		      			  			marker.setIcon(treeicon);
+		      			  			marker.options.heritage ? marker.setIcon(treeicon_gold) : marker.setIcon(treeicon);
 		      			  		});
 		      			  	}
 		      			  });

@@ -54,13 +54,6 @@ html, body, .container{
   left: -5px;
 }
 
-/*.dropdown-menu {
-	max-height: 400px;
-	overflow-y: auto;
-	overflow-x: hidden;
-}*/
-
-
 .row {
 	height: 100%;
 }
@@ -180,19 +173,6 @@ html, body, .container{
     fill: #5e8dc9;
 }
 
-/*styling for modal
-*/
-
-/*.modal-dialog {
-  height: 90%;
-  padding-top: 5%;
-  margin-top : 0px;
-  margin-bottom: 0px;
-  width: 90%;
-  margin-left: 5%;
-}
-*/
-
 .modal-dialog {
   top:5%;
   height: 90%;
@@ -216,24 +196,6 @@ html, body, .container{
   height: 100%;
   padding: 0px;
 }
-
-
-/*
-.navbar .nav > li {
-z-index: 10000;
-}*/
-
-/*#map-canvas {
-  width: 100%;
-  transition: width 0.3s ease;
-}
-
-.sidebar {
-  transition: margin 0.3s ease;
-}*/
-
-/*example navtabs*/
-
 
 .panel.with-nav-tabs .panel-heading{
     padding: 5px 5px 0 5px;
